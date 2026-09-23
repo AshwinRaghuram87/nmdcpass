@@ -23,6 +23,7 @@ interface HeaderProps {
   onExportExcel: () => void;
   onOpenReportModal: () => void;
   onResetData: () => void;
+  onOpenUserModal?: () => void;
   totalPasses: number;
 }
 
@@ -33,8 +34,11 @@ export const Header: React.FC<HeaderProps> = ({
   onExportExcel,
   onOpenReportModal,
   onResetData,
+  onOpenUserModal,
   totalPasses,
 }) => {
+  const isAdmin = currentProfile.role === 'admin';
+
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 shadow-md">
       {/* Top Security & Entity Banner */}
@@ -52,19 +56,33 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Dedicated Single User & Admin Badge (Ashwin R.) */}
-            <div
+            {/* User Profile / Switcher Badge */}
+            <button
               id="user-badge"
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-xs"
+              onClick={onOpenUserModal}
+              title="Click to switch user account (admin / user)"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-800 border border-slate-700 text-xs transition cursor-pointer"
             >
-              <div className="w-2 h-2 rounded-full bg-blue-400 ring-2 ring-blue-500/20" />
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isAdmin ? 'bg-blue-400 ring-2 ring-blue-500/20' : 'bg-emerald-400 ring-2 ring-emerald-500/20'
+                }`}
+              />
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-100">{currentProfile.name}</span>
-                <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-blue-900/60 text-blue-300 border border-blue-700">
-                  ADMIN
+                <span className="text-[11px] font-mono text-slate-400">(@{currentProfile.username})</span>
+                <span
+                  className={`text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded border ${
+                    isAdmin
+                      ? 'bg-blue-900/60 text-blue-300 border-blue-700'
+                      : 'bg-emerald-900/60 text-emerald-300 border-emerald-700'
+                  }`}
+                >
+                  {isAdmin ? 'ADMIN' : 'USER'}
                 </span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </div>
-            </div>
+            </button>
 
             <span className="text-slate-500 hidden sm:inline">({totalPasses} records)</span>
           </div>
@@ -129,41 +147,46 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Export Excel</span>
             </button>
 
-            {/* Upload Excel Data */}
-            <button
-              id="btn-upload-excel"
-              onClick={onOpenExcelModal}
-              title="Upload Excel (.xlsx) or CSV file with entry pass records"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-500/40 transition shadow-2xs cursor-pointer"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Upload Excel Data</span>
-            </button>
+            {/* Upload Excel Data - Available for Admin */}
+            {isAdmin && (
+              <button
+                id="btn-upload-excel"
+                onClick={onOpenExcelModal}
+                title="Upload Excel (.xlsx) or CSV file with entry pass records"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-500/40 transition shadow-2xs cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Upload Excel Data</span>
+              </button>
+            )}
 
-            {/* New Entry Pass */}
-            <button
-              id="btn-create-pass"
-              onClick={onOpenNewPassModal}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition shadow-2xs shadow-blue-600/30 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>New Entry Pass</span>
-            </button>
+            {/* New Entry Pass - Available for Admin */}
+            {isAdmin && (
+              <button
+                id="btn-create-pass"
+                onClick={onOpenNewPassModal}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition shadow-2xs shadow-blue-600/30 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>New Entry Pass</span>
+              </button>
+            )}
 
-            {/* Clear All Records */}
-            <button
-              id="btn-clear-all-data"
-              onClick={onResetData}
-              title="Delete all records and start with empty database"
-              className="inline-flex items-center gap-1.5 p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline text-xs">Clear Records</span>
-            </button>
+            {/* Clear All Records - Admin Only */}
+            {isAdmin && (
+              <button
+                id="btn-clear-all-data"
+                onClick={onResetData}
+                title="Delete all records and start with empty database"
+                className="inline-flex items-center gap-1.5 p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-xs">Clear Records</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
     </header>
   );
 };
-

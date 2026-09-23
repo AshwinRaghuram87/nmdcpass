@@ -3,6 +3,7 @@ export type UserRole = 'admin' | 'user';
 export interface UserProfile {
   id: string;
   name: string;
+  username: string;
   role: UserRole;
   email: string;
   organization: string; // e.g., 'Amnex Infotechnologies / NMDC Security' or 'CISF Gate Security Unit'

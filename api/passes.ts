@@ -24,7 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const isPostgresConfigured = !!(process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
+  const isPostgresConfigured = !!(
+    process.env.POSTGRES_URL || 
+    process.env.POSTGRES_PRISMA_URL || 
+    process.env.DATABASE_URL || 
+    process.env.DATABASE_URL_UNPOOLED
+  );
   const isKvConfigured = !!(
     (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ||
     process.env.KV_URL

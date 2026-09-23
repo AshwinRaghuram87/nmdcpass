@@ -13,20 +13,16 @@ import { UploadDocModal } from './components/UploadDocModal';
 import { UploadBillModal } from './components/UploadBillModal';
 import { PrintablePassModal } from './components/PrintablePassModal';
 import { PassReportModal } from './components/PassReportModal';
+import { RoleSwitcherModal } from './components/RoleSwitcherModal';
+import { getActiveUserProfile, setActiveUserProfile } from './utils/userProfiles';
 import { ShieldCheck, AlertTriangle, CheckCircle, Package, Receipt, RotateCcw } from 'lucide-react';
 
 export default function App() {
   const [passes, setPasses] = useState<EntryPass[]>(() => loadStoredPasses());
 
-  // Dedicated Single User & Admin: Ashwin R. (No login, no auth)
-  const [currentProfile] = useState<UserProfile>({
-    id: 'user-admin-ashwin',
-    name: 'Ashwin R.',
-    role: 'admin',
-    email: 'ashwin.r@amnex.com',
-    organization: 'Amnex Infotechnologies / NMDC Security Control',
-    designation: 'NMDC Project Lead & System Admin'
-  });
+  // Active User Profile: Defaults to Admin (Ashwin R.) or User (username: 'user')
+  const [currentProfile, setCurrentProfile] = useState<UserProfile>(() => getActiveUserProfile());
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
@@ -464,7 +460,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Corporate Header with Dedicated Single Admin Ashwin R. */}
+      {/* Main Corporate Header with User Profile / Switcher */}
       <Header
         currentProfile={currentProfile}
         onOpenReportModal={() => setIsReportModalOpen(true)}
@@ -475,6 +471,7 @@ export default function App() {
         onOpenExcelModal={() => setIsExcelModalOpen(true)}
         onExportExcel={() => exportPassesToExcel(passes)}
         onResetData={handleClearAllData}
+        onOpenUserModal={() => setIsUserModalOpen(true)}
         totalPasses={passes.length}
       />
 
@@ -698,6 +695,18 @@ export default function App() {
       <PrintablePassModal
         pass={printingPass}
         onClose={() => setPrintingPass(null)}
+      />
+
+      {/* User Switcher Modal */}
+      <RoleSwitcherModal
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+        currentProfile={currentProfile}
+        onSelectUser={(user) => {
+          const updated = setActiveUserProfile(user.username);
+          setCurrentProfile(updated);
+          showToast(`Switched active profile to ${updated.name} (@${updated.username})`);
+        }}
       />
     </div>
   );
