@@ -1022,85 +1022,85 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
               {/* -------------------------------------------------------------
                   PAGE 1: MATERIAL ENTRY PASS & AUTHORIZATION
                   ------------------------------------------------------------- */}
-              <div className="page-break-after bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt]">
+              <div className="page-break-after bg-white p-6 sm:p-8 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-tight text-[10pt]">
                 {/* Header */}
-                <div className="text-center font-bold space-y-1 mb-5">
-                  <div className="text-base sm:text-lg tracking-wider uppercase font-black font-serif">
+                <div className="text-center font-bold space-y-0.5 mb-2.5">
+                  <div className="text-sm sm:text-base tracking-wider uppercase font-black font-serif">
                     DONIMALAI IRON ORE MINE
                   </div>
-                  <div className="text-sm sm:text-base tracking-wide font-black uppercase underline decoration-1 underline-offset-4">
+                  <div className="text-xs sm:text-sm tracking-wide font-black uppercase underline decoration-1 underline-offset-4">
                     ENTRY PASS ({pass.materialCategory === 'Non-Returnable' ? 'Non -Returnable' : 'Returnable'})
                   </div>
-                  <div className="text-xs sm:text-sm font-semibold italic text-slate-800 font-serif">
+                  <div className="text-[8.5pt] font-semibold italic text-slate-800 font-serif">
                     (To be issued by the concerned Head of Department)
                   </div>
                 </div>
 
                 {/* Top Details Table */}
-                <table className="w-full border-collapse border border-black text-xs sm:text-[11pt] mb-3">
+                <table className="w-full border-collapse border border-black text-[9pt] sm:text-[9.5pt] mb-2">
                   <tbody>
                     <tr className="border border-black">
-                      <td className="w-[38%] p-2 font-bold border-r border-black align-top">
+                      <td className="w-[38%] py-1 px-2 font-bold border-r border-black align-top">
                         Name of department
                       </td>
-                      <td className="p-2 font-bold align-top">
+                      <td className="py-1 px-2 font-bold align-top">
                         {departmentName}
                       </td>
                     </tr>
                     <tr className="border border-black">
-                      <td className="p-2 font-bold border-r border-black align-top">
+                      <td className="py-1 px-2 font-bold border-r border-black align-top">
                         Gate Pass No. & Date
                       </td>
-                      <td className="p-2 align-top">
+                      <td className="py-1 px-2 align-top">
                         <span className="font-bold">{gatePassNo}</span>
                         <span className="ml-4 font-semibold">Dt. -{gatePassDate}</span>
                       </td>
                     </tr>
                     <tr className="border border-black">
-                      <td className="p-2 border-r border-black align-top">
+                      <td className="py-1 px-2 border-r border-black align-top">
                         <span className="font-bold mr-1">1.</span>
                         <span className="font-semibold">Name of Contractor/firm</span>
                       </td>
-                      <td className="p-2 font-bold align-top">
+                      <td className="py-1 px-2 font-bold align-top">
                         {contractorName}
                       </td>
                     </tr>
                     <tr className="border border-black">
-                      <td className="p-2 border-r border-black align-top">
+                      <td className="py-1 px-2 border-r border-black align-top">
                         <span className="font-bold mr-1">2.</span>
                         <div className="inline font-semibold">
                           Name of work and<br />
                           Reason for entry / exit
                         </div>
                       </td>
-                      <td className="p-2 align-top">
+                      <td className="py-1 px-2 align-top">
                         {nameOfWork}
                       </td>
                     </tr>
                     <tr className="border border-black">
-                      <td className="p-2 border-r border-black align-top">
+                      <td className="py-1 px-2 border-r border-black align-top">
                         <span className="font-bold mr-1">3</span>
                         <span className="font-semibold">Work Site/Location</span>
                       </td>
-                      <td className="p-2 font-bold align-top">
+                      <td className="py-1 px-2 font-bold align-top">
                         {workSiteLocation}
                       </td>
                     </tr>
                     <tr className="border border-black">
-                      <td className="p-2 border-r border-black align-top">
+                      <td className="py-1 px-2 border-r border-black align-top">
                         <span className="font-bold mr-1">4</span>
                         <span className="font-semibold">Work order No./LOI/Authority Letter</span>
                       </td>
-                      <td className="p-2 align-top whitespace-pre-line text-[10pt] leading-tight">
+                      <td className="py-1 px-2 align-top whitespace-pre-line text-[8pt] sm:text-[8.5pt] leading-tight">
                         {defaultWorkOrder}
                       </td>
                     </tr>
                     <tr className="border border-black">
-                      <td className="p-2 border-r border-black align-top">
+                      <td className="py-1 px-2 border-r border-black align-top">
                         <span className="font-bold mr-1">5</span>
                         <span className="font-semibold">Validity of Gate Pass (Date &Time)</span>
                       </td>
-                      <td className="p-2 font-bold align-top">
+                      <td className="py-1 px-2 font-bold align-top">
                         {gatePassDate} to {validToDate}
                       </td>
                     </tr>
@@ -1108,80 +1108,80 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                 </table>
 
                 {/* Vehicle Table 1 */}
-                <table className="w-full border-collapse border border-black text-xs sm:text-[11pt] mb-3 text-center">
+                <table className="w-full border-collapse border border-black text-[9pt] sm:text-[9.5pt] mb-2 text-center">
                   <thead>
                     <tr className="border border-black">
-                      <th className="w-[12%] p-2 border-r border-black font-bold">Sl.No.</th>
-                      <th className="w-[26%] p-2 border-r border-black font-bold">Type of vehicle</th>
-                      <th className="w-[26%] p-2 border-r border-black font-bold">Regn. No.</th>
-                      <th className="p-2 font-bold">Attachment/Stepney if Any</th>
+                      <th className="w-[12%] py-1 px-2 border-r border-black font-bold">Sl.No.</th>
+                      <th className="w-[26%] py-1 px-2 border-r border-black font-bold">Type of vehicle</th>
+                      <th className="w-[26%] py-1 px-2 border-r border-black font-bold">Regn. No.</th>
+                      <th className="py-1 px-2 font-bold">Attachment/Stepney if Any</th>
                     </tr>
                   </thead>
                   <tbody>
                     {vehicleList.map((v) => (
                       <tr key={v.slNo} className="border border-black">
-                        <td className="p-2 border-r border-black font-bold">{v.slNo}</td>
-                        <td className="p-2 border-r border-black">{v.type}</td>
-                        <td className="p-2 border-r border-black font-bold tracking-wider">{v.regnNo}</td>
-                        <td className="p-2 text-slate-700">{v.stepney}</td>
+                        <td className="py-1 px-2 border-r border-black font-bold">{v.slNo}</td>
+                        <td className="py-1 px-2 border-r border-black">{v.type}</td>
+                        <td className="py-1 px-2 border-r border-black font-bold tracking-wider">{v.regnNo}</td>
+                        <td className="py-1 px-2 text-slate-700">{v.stepney}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
                 {/* Vehicle Permission Text */}
-                <div className="text-xs sm:text-[10.5pt] mb-2 font-medium">
+                <div className="text-[8.5pt] sm:text-[9pt] mb-1.5 font-medium leading-tight">
                   The following vehicle(s)/ may please be allowed to ENTRY ({pass.materialCategory === 'Non-Returnable' ? 'Non Returnable' : 'Returnable'}) the check post for the above purpose.
                 </div>
 
                 {/* Second Table: Vehicle Condition & Material Items with blue nested header */}
-                <table className="w-full border-collapse border border-black text-xs sm:text-[10pt] mb-3">
+                <table className="w-full border-collapse border border-black text-[8.5pt] sm:text-[9pt] mb-2">
                   <thead>
                     <tr className="border border-black text-center font-bold">
-                      <th className="w-[8%] p-1.5 border-r border-black align-middle">Sl.No.</th>
-                      <th className="w-[16%] p-1.5 border-r border-black align-middle">Type of<br />vehicle</th>
-                      <th className="w-[18%] p-1.5 border-r border-black align-middle">Regn.<br />No.</th>
-                      <th className="w-[14%] p-1.5 border-r border-black align-middle">
+                      <th className="w-[8%] py-1 px-1 border-r border-black align-middle">Sl.No.</th>
+                      <th className="w-[16%] py-1 px-1 border-r border-black align-middle">Type of<br />vehicle</th>
+                      <th className="w-[18%] py-1 px-1 border-r border-black align-middle">Regn.<br />No.</th>
+                      <th className="w-[14%] py-1 px-1 border-r border-black align-middle">
                         Condition<br />
-                        <span className="font-semibold text-[9pt]">Loaded /empty</span>
+                        <span className="font-semibold text-[8pt]">Loaded /empty</span>
                       </th>
-                      <th className="p-1.5 font-bold align-middle">
+                      <th className="py-1 px-1 font-bold align-middle">
                         {pass.materialCategory === 'Non-Returnable' ? 'Non Returnable Items' : 'Returnable Items'}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border border-black">
-                      <td className="p-2 border-r border-black text-center font-bold align-middle">
+                      <td className="py-1.5 px-1 border-r border-black text-center font-bold align-middle">
                         1
                       </td>
-                      <td className="p-2 border-r border-black text-center align-middle font-medium">
+                      <td className="py-1.5 px-1 border-r border-black text-center align-middle font-medium">
                         {pass.vehicleType || 'Mahindra Bolero'}
                       </td>
-                      <td className="p-2 border-r border-black text-center align-middle font-bold tracking-wider text-[9pt] leading-tight whitespace-pre-line">
+                      <td className="py-1.5 px-1 border-r border-black text-center align-middle font-bold tracking-wider text-[8.5pt] leading-tight whitespace-pre-line">
                         {vehicleList.length > 1 
                           ? vehicleList.map(v => v.regnNo).join('\nAND\n') 
                           : (vehicleList[0]?.regnNo || 'KA-35b 3096\nAND\nKA-35b 9203')}
                       </td>
-                      <td className="p-2 border-r border-black text-center align-middle font-semibold">
+                      <td className="py-1.5 px-1 border-r border-black text-center align-middle font-semibold">
                         Loaded
                       </td>
                       <td className="p-0 align-top">
                         {/* Nested Sub-Table for Material Particulars */}
-                        <table className="w-full border-collapse border-0 text-xs sm:text-[10pt]">
+                        <table className="w-full border-collapse border-0 text-[8.5pt] sm:text-[9pt]">
                           <thead>
                             <tr className="bg-[#85c1e9] border-b border-black text-center font-bold text-black">
-                              <th className="w-[14%] p-1.5 border-r border-black">S/N</th>
-                              <th className="p-1.5 border-r border-black">PERTICULARS</th>
-                              <th className="w-[34%] p-1.5">QTY/METERS</th>
+                              <th className="w-[14%] py-1 px-1 border-r border-black">S/N</th>
+                              <th className="py-1 px-1 border-r border-black">PERTICULARS</th>
+                              <th className="w-[34%] py-1 px-1">QTY/METERS</th>
                             </tr>
                           </thead>
                           <tbody>
                             {itemsList.map((item, idx) => (
                               <tr key={item.id || idx} className="border-b border-black last:border-b-0 font-bold text-black">
-                                <td className="p-1.5 border-r border-black text-center">{idx + 1}</td>
-                                <td className="p-1.5 border-r border-black text-left pl-2 font-bold">{item.itemName}</td>
-                                <td className="p-1.5 text-center font-bold">{item.quantity} {item.unit || 'TRUCKS'}</td>
+                                <td className="py-1 px-1 border-r border-black text-center">{idx + 1}</td>
+                                <td className="py-1 px-1 border-r border-black text-left pl-2 font-bold">{item.itemName}</td>
+                                <td className="py-1 px-1 text-center font-bold">{item.quantity} {item.unit || 'TRUCKS'}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1191,45 +1191,71 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                   </tbody>
                 </table>
 
-                {/* Gate Pass Issued By Table (Checked By & Signed By HOD) */}
-                <div className="text-xs sm:text-[10.5pt] mb-3">
-                  <div className="font-bold mb-1 italic">Gate pass issued by:</div>
-                  <table className="w-full border-collapse border border-black text-xs sm:text-[10.5pt]">
+                {/* Gate Pass Issued By Table (Checked By, Recommended By & Signed By HOD) */}
+                <div className="text-[8.5pt] sm:text-[9pt] mb-2">
+                  <div className="font-bold mb-0.5 italic">Gate pass issued by:</div>
+                  <table className="w-full border-collapse border border-black text-[8.5pt] sm:text-[9pt]">
                     <thead>
                       <tr className="border-b border-black">
-                        <th className="w-[20%] p-2 border-r border-black font-bold text-left">Name</th>
-                        <th className="w-[55%] p-2 border-r border-black font-bold text-left">Name and Designation</th>
-                        <th className="p-2 font-bold text-left">Signature</th>
+                        <th className="w-[20%] py-1 px-2 border-r border-black font-bold text-left">Name</th>
+                        <th className="w-[55%] py-1 px-2 border-r border-black font-bold text-left">Name and Designation</th>
+                        <th className="py-1 px-2 font-bold text-left">Signature</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-black">
-                        <td className="p-2 border-r border-black font-bold align-top">Checked By</td>
-                        <td className="p-2 border-r border-black align-top">
-                          <div className="font-bold">Mr Mayur Kant Tripathi</div>
-                          <div className="text-slate-800">Dy.G.M (Electrical)/C&IT)</div>
+                        <td className="py-1 px-2 border-r border-black font-bold align-top">Checked By</td>
+                        <td className="p-0 border-r border-black align-top">
+                          <div className="flex h-full min-h-[46px]">
+                            <div className="w-[70%] py-1 px-2 border-r border-black flex flex-col justify-center">
+                              <div className="font-bold">Mr Mayur Kant Tripathi</div>
+                              <div className="text-slate-800 text-[8pt]">Dy.G.M (Electrical)/C&IT)</div>
+                            </div>
+                            <div className="w-[30%] py-1 px-2 flex items-center justify-center text-center text-slate-300">
+                              —
+                            </div>
+                          </div>
                         </td>
-                        <td className="p-2 align-bottom h-14">
-                          <div className="text-emerald-700 font-mono text-[8pt] italic font-semibold">
+                        <td className="py-1 px-2 align-bottom h-11">
+                          <div className="text-emerald-700 font-mono text-[7.5pt] italic font-semibold">
                             {pass.citApprovedDate ? `✓ Verified on ${pass.citApprovedDate}` : ''}
                           </div>
                         </td>
                       </tr>
-                      <tr>
-                        <td className="p-2 border-r border-black font-bold align-top">Signed By</td>
+                      <tr className="border-b border-black">
+                        <td className="py-1 px-2 border-r border-black font-bold align-top">Recommended by</td>
                         <td className="p-0 border-r border-black align-top">
-                          <div className="flex h-full min-h-[56px]">
-                            <div className="w-[70%] p-2 border-r border-black flex flex-col justify-center">
-                              <div className="font-bold">Mr Sreekanth Babu B</div>
-                              <div className="text-slate-800">Dy.G.M (C&IT)</div>
+                          <div className="flex h-full min-h-[46px]">
+                            <div className="w-[70%] py-1 px-2 border-r border-black flex flex-col justify-center">
+                              <div className="font-bold">Mr.A.V.L.Ramakrishna</div>
+                              <div className="text-slate-800 text-[8pt]">Dy.G.M (C&IT)</div>
                             </div>
-                            <div className="w-[30%] p-2 font-bold flex items-center justify-center text-center">
+                            <div className="w-[30%] py-1 px-2 font-bold flex items-center justify-center text-center text-[8pt] sm:text-[8.5pt] leading-tight">
+                              Engineer-in-Charge
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-1 px-2 align-bottom h-11">
+                          <div className="text-emerald-700 font-mono text-[7.5pt] italic font-semibold">
+                            {pass.recommendedDate ? `✓ Recommended on ${pass.recommendedDate}` : ''}
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 px-2 border-r border-black font-bold align-top">Signed By</td>
+                        <td className="p-0 border-r border-black align-top">
+                          <div className="flex h-full min-h-[46px]">
+                            <div className="w-[70%] py-1 px-2 border-r border-black flex flex-col justify-center">
+                              <div className="font-bold">Mr Sreekanth Babu B</div>
+                              <div className="text-slate-800 text-[8pt]">Dy.G.M (C&IT)</div>
+                            </div>
+                            <div className="w-[30%] py-1 px-2 font-bold flex items-center justify-center text-center text-[8.5pt]">
                               H.O.D
                             </div>
                           </div>
                         </td>
-                        <td className="p-2 align-bottom h-14">
-                          <div className="text-emerald-700 font-mono text-[8pt] italic font-semibold">
+                        <td className="py-1 px-2 align-bottom h-11">
+                          <div className="text-emerald-700 font-mono text-[7.5pt] italic font-semibold">
                             {pass.cisfSignatureDate ? `✓ Signed on ${pass.cisfSignatureDate}` : ''}
                           </div>
                         </td>
@@ -1238,13 +1264,42 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                   </table>
                 </div>
 
-                {/* Triplicate Copy Footer */}
-                <div className="border border-black p-2 mt-4 text-center font-bold tracking-widest text-xs sm:text-[11pt] uppercase flex justify-around">
-                  <span>OFFICE COPY</span>
-                  <span>|</span>
-                  <span>CUSTOMER COPY</span>
-                  <span>|</span>
-                  <span>CISF COPY</span>
+                {/* Triplicate Copy Footer with Dedicated Space for CISF Stamping & Signing */}
+                <div className="border border-black mt-2 grid grid-cols-3 divide-x divide-black text-center text-[8.5pt] sm:text-[9pt]">
+                  {/* OFFICE COPY */}
+                  <div className="p-1.5 flex flex-col justify-between min-h-[70px]">
+                    <div className="font-bold uppercase tracking-wider text-[9pt] sm:text-[9.5pt]">
+                      OFFICE COPY
+                    </div>
+                    <div className="text-[7pt] text-slate-500 italic mt-auto">
+                      Department Record
+                    </div>
+                  </div>
+
+                  {/* CUSTOMER COPY */}
+                  <div className="p-1.5 flex flex-col justify-between min-h-[70px]">
+                    <div className="font-bold uppercase tracking-wider text-[9pt] sm:text-[9.5pt]">
+                      CUSTOMER COPY
+                    </div>
+                    <div className="text-[7pt] text-slate-500 italic mt-auto">
+                      Transporter / Vendor Copy
+                    </div>
+                  </div>
+
+                  {/* CISF COPY with dedicated space for Stamping & Signing */}
+                  <div className="p-1.5 flex flex-col justify-between min-h-[70px] bg-slate-50/60">
+                    <div className="font-bold uppercase tracking-wider text-[9pt] sm:text-[9.5pt]">
+                      CISF COPY
+                    </div>
+                    <div className="border-t border-dashed border-slate-500 pt-0.5 mt-auto flex flex-col items-center">
+                      <div className="text-[7.5pt] font-bold text-slate-800 uppercase tracking-tight">
+                        CISF Gate Stamping & Signature
+                      </div>
+                      <div className="text-[6.5pt] text-slate-500 italic">
+                        (Date / In-Out Seal & Verification)
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
