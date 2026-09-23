@@ -15,23 +15,23 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
   onClose,
   onSaveBill
 }) => {
-  if (!isOpen || !pass) return null;
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [billNumber, setBillNumber] = useState(
-    pass.billNumber || pass.challanInvoiceNumber || `AMN-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
+    pass?.billNumber || pass?.challanInvoiceNumber || `AMN-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
   );
   const [selectedFile, setSelectedFile] = useState<{
     fileName: string;
     fileSize: string;
     fileUrl: string;
-  } | null>(pass.billDocument ? {
+  } | null>(pass?.billDocument ? {
     fileName: pass.billDocument.fileName,
     fileSize: pass.billDocument.fileSize || 'Attached',
     fileUrl: pass.billDocument.fileUrl
   } : null);
   const [uploadedBy, setUploadedBy] = useState('Amnex Billing & NMDC Materials In-Charge');
   const [isSuccess, setIsSuccess] = useState(false);
+
+  if (!isOpen || !pass) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

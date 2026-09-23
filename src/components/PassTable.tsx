@@ -454,25 +454,14 @@ export const PassTable: React.FC<PassTableProps> = ({
                                 )}
                               </div>
                               
-                              {/* BOQ Item & Bill Number Tags */}
-                              <div className="mt-1 flex flex-wrap items-center gap-1">
-                                {pass.materialItems[0].isBoq ? (
-                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 border border-indigo-200">
-                                    <Tag className="w-2.5 h-2.5 text-indigo-600" />
-                                    <span>BOQ: {pass.materialItems[0].boqItemNumber || 'Yes'}</span>
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                                    Non-BOQ
-                                  </span>
-                                )}
-
-                                {(pass.billNumber || pass.materialItems[0].billNumber) && (
+                              {/* Material Bill Number Tag */}
+                              {(pass.billNumber || pass.materialItems[0].billNumber) && (
+                                <div className="mt-1 flex flex-wrap items-center gap-1">
                                   <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
                                     Bill: {pass.billNumber || pass.materialItems[0].billNumber}
                                   </span>
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -682,10 +671,9 @@ export const PassTable: React.FC<PassTableProps> = ({
                             <thead>
                               <tr className="bg-slate-100 text-slate-700 text-[11px] font-semibold">
                                 <th className="py-1.5 px-2.5">Item Description & Specification</th>
-                                <th className="py-1.5 px-2.5">BOQ Classification</th>
                                 <th className="py-1.5 px-2.5">Quantity & Unit</th>
-                                <th className="py-1.5 px-2.5">Bill Number</th>
-                                <th className="py-1.5 px-2.5">Serial / Asset #</th>
+                                <th className="py-1.5 px-2.5">Bill / Challan Number</th>
+                                <th className="py-1.5 px-2.5">Serial / Tag #</th>
                                 <th className="py-1.5 px-2.5">Remarks</th>
                               </tr>
                             </thead>
@@ -696,18 +684,6 @@ export const PassTable: React.FC<PassTableProps> = ({
                                     {item.itemName}
                                     {item.specification && (
                                       <span className="text-[11px] text-slate-500 block">{item.specification}</span>
-                                    )}
-                                  </td>
-                                  <td className="py-1.5 px-2.5">
-                                    {item.isBoq ? (
-                                      <span className="inline-flex items-center gap-1 font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded text-[10px]">
-                                        <Tag className="w-2.5 h-2.5" />
-                                        <span>BOQ Item ({item.boqItemNumber || 'Ref'})</span>
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-[10px] font-medium">
-                                        Non-BOQ
-                                      </span>
                                     )}
                                   </td>
                                   <td className="py-1.5 px-2.5 font-semibold text-slate-800">

@@ -1,4 +1,5 @@
 import { EntryPass, ProcedureStage, DESIGNATED_GATES } from '../types';
+import { INITIAL_PASSES } from '../data/initialPasses';
 
 const STORAGE_KEY = 'amnex_nmdc_entry_passes_v3_clean';
 
@@ -65,13 +66,16 @@ export function loadStoredPasses(): EntryPass[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) {
-      return [];
+      return normalizePasses(INITIAL_PASSES);
     }
     const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return normalizePasses(INITIAL_PASSES);
+    }
     return normalizePasses(parsed);
   } catch (err) {
     console.error('Failed to read passes from localStorage', err);
-    return [];
+    return normalizePasses(INITIAL_PASSES);
   }
 }
 

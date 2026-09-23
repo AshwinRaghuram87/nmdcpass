@@ -23,14 +23,14 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
   onClose,
   onImportPasses
 }) => {
-  if (!isOpen) return null;
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [parsedRows, setParsedRows] = useState<ParsedRowResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  if (!isOpen) return null;
 
   const handleFileProcess = async (file: File) => {
     setSelectedFile(file);

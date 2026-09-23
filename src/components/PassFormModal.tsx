@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   EntryPass, 
   PassType, 
   MaterialReturnType, 
   PassEmployee, 
+  EmployeeCarriedItem,
   MaterialItem,
   PassStatus,
   ApprovedDocument,
@@ -11,6 +12,7 @@ import {
   DESIGNATED_GATES,
   DesignatedGate
 } from '../types';
+import { getNextPassNumber } from '../utils/passUtils';
 import { 
   X, 
   Plus, 
@@ -27,7 +29,9 @@ import {
   Receipt,
   Tag,
   Layers,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface PassFormModalProps {
@@ -35,23 +39,23 @@ interface PassFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (passData: Partial<EntryPass>) => void;
+  existingPasses?: EntryPass[];
 }
 
 export const PassFormModal: React.FC<PassFormModalProps> = ({
   pass,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  existingPasses = []
 }) => {
-  if (!isOpen) return null;
-
   const isEditing = !!pass;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const billFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [passNumber, setPassNumber] = useState(
-    pass?.passNumber || `AMN-NMDC-EMP-${Date.now().toString().slice(-4)}`
+    pass?.passNumber || getNextPassNumber(existingPasses)
   );
   const [passType, setPassType] = useState<PassType>(pass?.passType || 'Employee');
   const [passHolderName, setPassHolderName] = useState(pass?.passHolderName || '');
@@ -62,7 +66,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
     pass?.departmentOrProject || 'C&IT'
   );
   const [gateNumber, setGateNumber] = useState<string>(
-    pass?.gateNumber || 'DIOM'
+    pass?.gateNumber || 'KIOM/DIOM/PPT'
   );
   const [procedureStage, setProcedureStage] = useState<ProcedureStage>(
     pass?.procedureStage || 'Pass Prepared'
@@ -84,12 +88,18 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
           {
             id: `emp-${Date.now()}`,
             name: '',
-            designation: 'Staff / Engineer',
+            designation: 'Skilled Labour',
             idNumber: '',
-            contactNumber: ''
+            contactNumber: '',
+            fatherName: '',
+            sex: 'M',
+            age: '',
+            dob: '',
+            address: ''
           }
         ]
   );
+  const [expandedEmpId, setExpandedEmpId] = useState<string | null>(null);
 
   // Vehicle specific
   const [vehicleNumber, setVehicleNumber] = useState(pass?.vehicleNumber || '');
@@ -153,13 +163,63 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   const [vehicleCondition, setVehicleCondition] = useState<'Loaded' | 'Empty'>(
     pass?.vehicleCondition || 'Loaded'
   );
+  const [recommendedBy, setRecommendedBy] = useState(
+    pass?.recommendedBy || 'Mr. AVL Ramakrishna, Dy. GM( C&IT) , Engineer-in-Charge'
+  );
 
-  // Handle pass type change and adjust passNumber prefix
+  // Re-sync when modal opens or target pass changes
+  useEffect(() => {
+    if (isOpen) {
+      if (pass) {
+        setPassNumber(pass.passNumber);
+        setPassType(pass.passType);
+        setPassHolderName(pass.passHolderName || '');
+        setPassHolderDesignation(pass.passHolderDesignation || '');
+        setPassHolderContact(pass.passHolderContact || '');
+        setPassHolderIdProof(pass.passHolderIdProof || '');
+        setDepartmentOrProject(pass.departmentOrProject || 'C&IT');
+        setGateNumber(pass.gateNumber || 'KIOM/DIOM/PPT');
+        setProcedureStage(pass.procedureStage || 'Pass Prepared');
+        setValidFrom(pass.validFrom);
+        setValidTo(pass.validTo);
+        setStatus(pass.status);
+        setFollowUpNotes(pass.followUpNotes || '');
+        setVehicleNumber(pass.vehicleNumber || '');
+        setVehicleType(pass.vehicleType || 'Commercial / Utility Van');
+        setRecommendedBy(pass.recommendedBy || 'Mr. AVL Ramakrishna, Dy. GM( C&IT) , Engineer-in-Charge');
+        if (pass.employees && pass.employees.length > 0) {
+          setEmployees(pass.employees);
+        } else if (pass.passHolderName) {
+          setEmployees([
+            {
+              id: `emp-${Date.now()}`,
+              name: pass.passHolderName,
+              designation: pass.passHolderDesignation || 'Skilled Labour',
+              idNumber: pass.passHolderIdProof || '',
+              contactNumber: pass.passHolderContact || '',
+              fatherName: '',
+              sex: 'M',
+              age: '',
+              dob: '',
+              address: ''
+            }
+          ]);
+        }
+      } else {
+        // Generating new pass starting from NMDC/C&IT/15
+        setPassNumber(getNextPassNumber(existingPasses));
+      }
+    }
+  }, [isOpen, pass, existingPasses]);
+
+  // Handle pass type change
   const handlePassTypeChange = (type: PassType) => {
     setPassType(type);
     if (!isEditing) {
-      const code = type === 'Employee' ? 'EMP' : type === 'Contractor' ? 'CON' : type === 'Vehicle' ? 'VEH' : 'MAT';
-      setPassNumber(`AMN-NMDC-${code}-${Date.now().toString().slice(-4)}`);
+      // Ensure pass number starts from NMDC/C&IT/15
+      if (!passNumber || passNumber.startsWith('AMN-NMDC-')) {
+        setPassNumber(getNextPassNumber(existingPasses));
+      }
       if (type === 'Contractor') {
         setGateNumber('DIOM');
       } else if (type === 'Materials') {
@@ -174,19 +234,26 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
 
   // Employee management
   const handleAddEmployee = () => {
+    const newId = `emp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     setEmployees([
       ...employees,
       {
-        id: `emp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: newId,
         name: '',
-        designation: 'Technician / Worker',
+        designation: 'Skilled Labour',
         idNumber: '',
-        contactNumber: ''
+        contactNumber: '',
+        fatherName: '',
+        sex: 'M',
+        age: '',
+        dob: '',
+        address: ''
       }
     ]);
+    setExpandedEmpId(newId);
   };
 
-  const handleUpdateEmployee = (index: number, field: keyof PassEmployee, value: string) => {
+  const handleUpdateEmployee = (index: number, field: keyof PassEmployee, value: any) => {
     const updated = [...employees];
     updated[index] = { ...updated[index], [field]: value };
     setEmployees(updated);
@@ -195,6 +262,65 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   const handleRemoveEmployee = (index: number) => {
     if (employees.length <= 1) return;
     setEmployees(employees.filter((_, i) => i !== index));
+  };
+
+  const handleToggleAllowedToCarry = (empIndex: number, checked: boolean) => {
+    const updated = [...employees];
+    const current = updated[empIndex];
+    const defaultItems: EmployeeCarriedItem[] = [
+      { slNo: 1, itemName: 'Laptop (Dell Latitude)', nos: '1 Nos', serialNumber: '' },
+      { slNo: 2, itemName: 'Toolkit / Accessories', nos: '1 Set', serialNumber: '' }
+    ];
+    updated[empIndex] = {
+      ...current,
+      allowedToCarry: checked,
+      carriedItems: checked 
+        ? (current.carriedItems && current.carriedItems.length > 0 ? current.carriedItems : defaultItems)
+        : current.carriedItems
+    };
+    setEmployees(updated);
+  };
+
+  const handleAddCarriedItem = (empIndex: number) => {
+    const updated = [...employees];
+    const current = updated[empIndex];
+    const items = current.carriedItems || [];
+    updated[empIndex] = {
+      ...current,
+      carriedItems: [
+        ...items,
+        {
+          id: `item-${Date.now()}`,
+          slNo: items.length + 1,
+          itemName: '',
+          nos: '1 Nos',
+          serialNumber: ''
+        }
+      ]
+    };
+    setEmployees(updated);
+  };
+
+  const handleUpdateCarriedItem = (
+    empIndex: number,
+    itemIndex: number,
+    field: keyof EmployeeCarriedItem,
+    value: any
+  ) => {
+    const updated = [...employees];
+    const current = updated[empIndex];
+    const items = [...(current.carriedItems || [])];
+    items[itemIndex] = { ...items[itemIndex], [field]: value };
+    updated[empIndex] = { ...current, carriedItems: items };
+    setEmployees(updated);
+  };
+
+  const handleRemoveCarriedItem = (empIndex: number, itemIndex: number) => {
+    const updated = [...employees];
+    const current = updated[empIndex];
+    const items = (current.carriedItems || []).filter((_, i) => i !== itemIndex);
+    updated[empIndex] = { ...current, carriedItems: items };
+    setEmployees(updated);
   };
 
   // Material item management
@@ -309,6 +435,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
       workOrderNo,
       stepneyAttachment,
       vehicleCondition,
+      recommendedBy,
     };
 
     if (passType === 'Vehicle') {
@@ -318,6 +445,8 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
     }
 
     if (passType === 'Materials') {
+      payload.vehicleNumber = vehicleNumber;
+      payload.vehicleType = vehicleType;
       payload.materialCategory = materialCategory;
       payload.challanInvoiceNumber = challanInvoiceNumber;
       payload.expectedReturnDate = materialCategory === 'Returnable' ? expectedReturnDate : undefined;
@@ -331,6 +460,8 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
 
     onSave(payload);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
@@ -407,25 +538,41 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                 required
                 value={passNumber}
                 onChange={(e) => setPassNumber(e.target.value)}
-                placeholder="e.g. AMN-NMDC-EMP-1044"
+                placeholder="e.g. NMDC/C&IT/15"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-hidden"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Designated CISF Gate <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Work Site / Designated CISF Gate <span className="text-rose-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setGateNumber('KIOM/DIOM/PPT')}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded border transition cursor-pointer ${
+                    gateNumber === 'KIOM/DIOM/PPT'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                  }`}
+                  title="Select all three work site check posts: KIOM / DIOM / PPT"
+                >
+                  ✓ All Sites (KIOM/DIOM/PPT)
+                </button>
+              </div>
               <select
                 value={gateNumber}
                 onChange={(e) => setGateNumber(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-hidden cursor-pointer"
               >
-                {DESIGNATED_GATES.map((gate) => (
-                  <option key={gate} value={gate}>
-                    {gate} Gate
-                  </option>
-                ))}
+                <option value="KIOM/DIOM/PPT">
+                  All Work Sites: KIOM / DIOM / PPT
+                </option>
+                <option value="DIOM">DIOM Gate</option>
+                <option value="KIOM">KIOM Gate</option>
+                <option value="PPT">PPT Gate</option>
+                <option value="Admin Building">Admin Building Gate</option>
               </select>
             </div>
           </div>
@@ -606,41 +753,223 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {employees.map((emp, index) => (
-                <div key={emp.id || index} className="flex flex-col sm:flex-row items-center gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-mono text-slate-400 w-4 text-center">{index + 1}</span>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Personnel Full Name *"
-                    value={emp.name}
-                    onChange={(e) => handleUpdateEmployee(index, 'name', e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Role / Designation"
-                    value={emp.designation}
-                    onChange={(e) => handleUpdateEmployee(index, 'designation', e.target.value)}
-                    className="w-full sm:w-36 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Aadhaar / ID Proof"
-                    value={emp.idNumber}
-                    onChange={(e) => handleUpdateEmployee(index, 'idNumber', e.target.value)}
-                    className="w-full sm:w-36 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveEmployee(index)}
-                    disabled={employees.length <= 1}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 disabled:opacity-30 rounded transition cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+              {employees.map((emp, index) => {
+                const isExpanded = expandedEmpId === (emp.id || String(index));
+                const empIdentifier = emp.id || String(index);
+
+                return (
+                  <div key={empIdentifier} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden transition">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 p-2.5">
+                      <span className="text-[10px] font-mono font-bold text-slate-500 w-5 text-center">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Personnel Full Name *"
+                        value={emp.name}
+                        onChange={(e) => handleUpdateEmployee(index, 'name', e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Role / Designation"
+                        value={emp.designation}
+                        onChange={(e) => handleUpdateEmployee(index, 'designation', e.target.value)}
+                        className="w-full sm:w-36 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Aadhaar / ID Proof"
+                        value={emp.idNumber}
+                        onChange={(e) => handleUpdateEmployee(index, 'idNumber', e.target.value)}
+                        className="w-full sm:w-36 px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-mono text-slate-800 focus:outline-hidden focus:border-blue-500"
+                      />
+                      
+                      {/* Attachment No. 2 Details Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedEmpId(isExpanded ? null : empIdentifier)}
+                        className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 border transition cursor-pointer ${
+                          isExpanded 
+                            ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                            : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Edit Attachment No. 2 details (Father name, Sex, DOB, Address)"
+                      >
+                        <span>Details</span>
+                        {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEmployee(index)}
+                        disabled={employees.length <= 1}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 disabled:opacity-30 rounded transition cursor-pointer"
+                        title="Remove personnel"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Expandable Section for Attachment No. 2 Application Form Details */}
+                    {isExpanded && (
+                      <div className="px-3 pb-3 pt-1 border-t border-slate-200 bg-white/60 space-y-2.5 animate-in fade-in duration-100">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                          <span className="flex items-center gap-1 text-indigo-700">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Attachment No. 2 (Application Form) Details</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            Used in official individual application forms
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Father's Name</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Parasappa"
+                              value={emp.fatherName || ''}
+                              onChange={(e) => handleUpdateEmployee(index, 'fatherName', e.target.value)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Sex</label>
+                            <select
+                              value={emp.sex || 'M'}
+                              onChange={(e) => handleUpdateEmployee(index, 'sex', e.target.value)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                            >
+                              <option value="M">Male (M)</option>
+                              <option value="F">Female (F)</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Age</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 33"
+                              value={emp.age || ''}
+                              onChange={(e) => handleUpdateEmployee(index, 'age', e.target.value)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Date of Birth</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 01.01.1993"
+                              value={emp.dob || ''}
+                              onChange={(e) => handleUpdateEmployee(index, 'dob', e.target.value)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Present Address</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 4th Ward, Chapparadahalli, Taranagar, Bellary 583119"
+                            value={emp.address || ''}
+                            onChange={(e) => handleUpdateEmployee(index, 'address', e.target.value)}
+                            className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
+                          />
+                        </div>
+
+                        {/* Allowed to carry section */}
+                        <div className="pt-2 border-t border-slate-200/80">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={!!emp.allowedToCarry}
+                                onChange={(e) => handleToggleAllowedToCarry(index, e.target.checked)}
+                                className="rounded text-blue-600 focus:ring-0 cursor-pointer"
+                              />
+                              <span className="text-xs font-bold text-slate-800">
+                                Allowed to Carry Items (Tools / Equipment / Laptop)
+                              </span>
+                            </label>
+
+                            {emp.allowedToCarry && (
+                              <button
+                                type="button"
+                                onClick={() => handleAddCarriedItem(index)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[11px] font-semibold border border-blue-200 cursor-pointer"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Add Item</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {emp.allowedToCarry && (
+                            <div className="space-y-1.5 bg-slate-100/70 p-2 rounded-lg border border-slate-200">
+                              <div className="grid grid-cols-[45px_1fr_80px_110px_28px] gap-1.5 text-[10px] font-bold text-slate-500 uppercase px-1">
+                                <span>Sl No</span>
+                                <span>Item Name</span>
+                                <span>Nos</span>
+                                <span>Sl Number</span>
+                                <span></span>
+                              </div>
+                              {(emp.carriedItems && emp.carriedItems.length > 0 ? emp.carriedItems : [
+                                { slNo: 1, itemName: 'Laptop (Dell Latitude)', nos: '1 Nos', serialNumber: '' }
+                              ]).map((cItem, cIdx) => (
+                                <div key={cIdx} className="grid grid-cols-[45px_1fr_80px_110px_28px] gap-1.5 items-center">
+                                  <input
+                                    type="text"
+                                    placeholder="1"
+                                    value={cItem.slNo ?? (cIdx + 1)}
+                                    onChange={(e) => handleUpdateCarriedItem(index, cIdx, 'slNo', e.target.value)}
+                                    className="px-1.5 py-1 text-center bg-white border border-slate-200 rounded text-xs text-slate-800 font-semibold"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Laptop / Toolkit"
+                                    value={cItem.itemName}
+                                    onChange={(e) => handleUpdateCarriedItem(index, cIdx, 'itemName', e.target.value)}
+                                    className="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. 1 Nos"
+                                    value={cItem.nos}
+                                    onChange={(e) => handleUpdateCarriedItem(index, cIdx, 'nos', e.target.value)}
+                                    className="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 text-center"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. DL-8849"
+                                    value={cItem.serialNumber || ''}
+                                    onChange={(e) => handleUpdateCarriedItem(index, cIdx, 'serialNumber', e.target.value)}
+                                    className="px-2 py-1 bg-white border border-slate-200 rounded text-xs font-mono text-slate-800"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveCarriedItem(index, cIdx)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                                    title="Delete item"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -728,6 +1057,40 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                     <Layers className="w-3 h-3" />
                     <span>NRGP (Non-Returnable)</span>
                   </button>
+                </div>
+              </div>
+
+              {/* Material Transport Vehicle Details */}
+              <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-2">
+                <div className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Transport Vehicle Details (For Gate Check Post)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                      Vehicle Registration Number(s)
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleNumber}
+                      onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                      placeholder="e.g. KA-35-B-3096 / KA-35-B-9203"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                      Type of Vehicle
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleType}
+                      onChange={(e) => setVehicleType(e.target.value)}
+                      placeholder="e.g. Truck / Mahindra Bolero / Tipper"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -825,15 +1188,15 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                 )}
               </div>
 
-              {/* Material Items list with BOQ and Bill fields */}
+              {/* Material Items list */}
               <div className="space-y-3 pt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold text-slate-800">
-                      Material Inventory & BOQ Specification ({materialItems.length} Items)
+                      Material Consignment Items ({materialItems.length} Items)
                     </span>
                     <p className="text-[11px] text-slate-500">
-                      Specify BOQ Item Number (whether BOQ or Non-BOQ) and item bill number
+                      Particulars of material items, quantity, unit, and consignment bill details
                     </p>
                   </div>
                   <button
@@ -867,7 +1230,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                           <input
                             type="text"
                             required
-                            placeholder="Item Name / Model *"
+                            placeholder="Particulars of Material / Item Name *"
                             value={itm.itemName}
                             onChange={(e) => handleUpdateMaterialItem(idx, 'itemName', e.target.value)}
                             className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
@@ -885,7 +1248,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                           />
                           <input
                             type="text"
-                            placeholder="Unit (Nos/Set)"
+                            placeholder="Unit (e.g. TRUCKS, Nos)"
                             value={itm.unit}
                             onChange={(e) => handleUpdateMaterialItem(idx, 'unit', e.target.value)}
                             className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs"
@@ -904,36 +1267,13 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                         </div>
                       </div>
 
-                      {/* BOQ and Bill details row */}
+                      {/* Bill details and Remarks row */}
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1 border-t border-slate-100 items-center">
-                        {/* BOQ toggle */}
-                        <div className="sm:col-span-4 flex items-center gap-2">
-                          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={!!itm.isBoq}
-                              onChange={(e) => handleUpdateMaterialItem(idx, 'isBoq', e.target.checked)}
-                              className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <span>BOQ Item</span>
-                          </label>
-
-                          {itm.isBoq && (
-                            <input
-                              type="text"
-                              placeholder="BOQ # (e.g. BOQ-4.1)"
-                              value={itm.boqItemNumber || ''}
-                              onChange={(e) => handleUpdateMaterialItem(idx, 'boqItemNumber', e.target.value)}
-                              className="flex-1 px-2 py-1 bg-indigo-50/50 border border-indigo-200 rounded text-xs font-mono font-medium text-indigo-900"
-                            />
-                          )}
-                        </div>
-
                         {/* Item Bill Number */}
-                        <div className="sm:col-span-4">
+                        <div className="sm:col-span-6">
                           <input
                             type="text"
-                            placeholder="Item Bill # (if different)"
+                            placeholder="Challan / Bill # (if specific to this item)"
                             value={itm.billNumber || ''}
                             onChange={(e) => handleUpdateMaterialItem(idx, 'billNumber', e.target.value)}
                             className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-mono"
@@ -941,7 +1281,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                         </div>
 
                         {/* Specification / Remarks */}
-                        <div className="sm:col-span-4">
+                        <div className="sm:col-span-6">
                           <input
                             type="text"
                             placeholder="Specification or Remarks"
@@ -1126,6 +1466,22 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                   placeholder="Letters of Awards of Contract(LAC) Dated 27/04/2026..."
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-mono focus:outline-hidden focus:border-blue-500"
                 />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  Recommended By (For Material Passes)
+                </label>
+                <input
+                  type="text"
+                  value={recommendedBy}
+                  onChange={(e) => setRecommendedBy(e.target.value)}
+                  placeholder="Mr. AVL Ramakrishna, Dy. GM( C&IT) , Engineer-in-Charge"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Appears after Checked By and before Signed By on official Material Passes.
+                </span>
               </div>
             </div>
           </div>

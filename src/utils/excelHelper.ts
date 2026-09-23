@@ -184,7 +184,7 @@ export function parseExcelOrCsv(file: File): Promise<ParsedRowResult[]> {
             }
           }
 
-          const autoPassNumber = passNumber || `AMN-NMDC-${passType.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+          const autoPassNumber = passNumber || `NMDC/C&IT/${15 + index}`;
 
           const pass: Partial<EntryPass> = {
             id: `pass-${Date.now()}-${index}`,
@@ -277,12 +277,12 @@ export function downloadSampleTemplate(): void {
       'Amnex Core Team deployment'
     ],
     [
-      'AMN-NMDC-CON-2025-0230',
+      'NMDC/C&IT/15',
       'Contractor',
       'Kailash Patel (Patel Electricals)',
       'Kailash Patel (Supervisor), Amit Yadav, Mohan Lal, Suraj Kumar',
-      '2025-03-15',
-      '2025-04-15',
+      '2026-03-15',
+      '2026-04-15',
       'C&IT',
       'DIOM',
       'Submitted to CISF',
@@ -296,31 +296,31 @@ export function downloadSampleTemplate(): void {
       'Safety gear cleared; awaiting CISF signature'
     ],
     [
-      'AMN-NMDC-MAT-2025-0412',
+      'NMDC/C&IT/16',
       'Materials',
       'Sunil Joshi (Amnex Store)',
       'Sunil Joshi, Vijay Kumar',
-      '2025-03-18',
-      '2025-03-28',
+      '2026-03-18',
+      '2026-03-28',
       'C&IT',
       'PPT',
       'Pass Obtained',
       'Returnable',
-      '2025-03-28',
+      '2026-03-28',
       'Reference Calibration Weights (10 Pcs), Multimeter (2 Nos)',
       'BOQ-ELEC-4.1',
       'BOQ Item',
-      'AMN-GST-INV-2025-0891',
+      'AMN-GST-INV-2026-0891',
       '',
       'Returnable gate pass (RGP). Items must be returned after testing.'
     ],
     [
-      'AMN-NMDC-MAT-2025-0415',
+      'NMDC/C&IT/17',
       'Materials',
       'Tanmay Ghosh (Amnex Supply)',
       'Tanmay Ghosh',
-      '2025-03-18',
-      '2025-03-20',
+      '2026-03-18',
+      '2026-03-20',
       'C&IT',
       'KIOM',
       'Submitted to C&IT',
@@ -329,17 +329,17 @@ export function downloadSampleTemplate(): void {
       'CCTV Dome Cameras (6 Nos), Power Adapters (12 Nos)',
       'BOQ-SEC-1.1',
       'BOQ Item',
-      'AMN-GST-INV-2025-1104',
+      'AMN-GST-INV-2026-1104',
       '',
       'Non-Returnable delivery (NRGP) submitted for C&IT department approval.'
     ],
     [
-      'AMN-NMDC-VEH-2025-0089',
+      'NMDC/C&IT/18',
       'Vehicle',
       'Ramanuj Verma (Driver)',
       'Ramanuj Verma (Driver), Alok Mishra (Site Tech)',
-      '2025-03-01',
-      '2025-09-01',
+      '2026-03-01',
+      '2026-09-01',
       'C&IT',
       'DIOM',
       'Pass Obtained',
@@ -349,7 +349,7 @@ export function downloadSampleTemplate(): void {
       '',
       '',
       '',
-      'CG-17-MA-9102',
+      'KA-35-B-3096',
       'Spark arrestor and mine fitness valid'
     ]
   ];

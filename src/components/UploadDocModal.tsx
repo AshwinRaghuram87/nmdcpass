@@ -21,8 +21,6 @@ export const UploadDocModal: React.FC<UploadDocModalProps> = ({
   onClose,
   onSaveDoc
 }) => {
-  if (!isOpen || !pass) return null;
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<{
     fileName: string;
@@ -31,6 +29,8 @@ export const UploadDocModal: React.FC<UploadDocModalProps> = ({
   } | null>(null);
   const [uploadedBy, setUploadedBy] = useState('CISF Gate Security In-Charge');
   const [isSuccess, setIsSuccess] = useState(false);
+
+  if (!isOpen || !pass) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

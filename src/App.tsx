@@ -15,6 +15,7 @@ import { PrintablePassModal } from './components/PrintablePassModal';
 import { PassReportModal } from './components/PassReportModal';
 import { RoleSwitcherModal } from './components/RoleSwitcherModal';
 import { getActiveUserProfile, setActiveUserProfile } from './utils/userProfiles';
+import { getNextPassNumber } from './utils/passUtils';
 import { ShieldCheck, AlertTriangle, CheckCircle, Package, Receipt, RotateCcw } from 'lucide-react';
 
 export default function App() {
@@ -128,9 +129,16 @@ export default function App() {
         }
       }
 
-      // Designated Gate Filter (DIOM, KIOM, Admin Building, PPT)
-      if (gateFilter !== 'ALL' && pass.gateNumber !== gateFilter) {
-        return false;
+      // Designated Gate Filter (DIOM, KIOM, Admin Building, PPT, KIOM/DIOM/PPT)
+      if (gateFilter !== 'ALL') {
+        if (gateFilter === 'KIOM/DIOM/PPT') {
+          if (pass.gateNumber !== 'KIOM/DIOM/PPT') return false;
+        } else {
+          // If filtering by a specific gate like DIOM, also match passes authorized for all sites KIOM/DIOM/PPT
+          if (pass.gateNumber !== gateFilter && !pass.gateNumber?.includes(gateFilter)) {
+            return false;
+          }
+        }
       }
 
       // Validity filter
@@ -274,7 +282,7 @@ export default function App() {
       // Create new
       const newPass: EntryPass = {
         id: `pass-${Date.now()}`,
-        passNumber: passData.passNumber || `AMN-NMDC-${Date.now()}`,
+        passNumber: passData.passNumber || getNextPassNumber(passes),
         passType: passData.passType || 'Employee',
         passHolderName: passData.passHolderName || 'Authorized Holder',
         passHolderDesignation: passData.passHolderDesignation,
@@ -672,88 +680,105 @@ export default function App() {
       </footer>
 
       {/* Passes Issued Audit & Material Movement Report Modal (RGP vs NRGP) */}
-      <PassReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        passes={passes}
-      />
+      {isReportModalOpen && (
+        <PassReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          passes={passes}
+        />
+      )}
 
       {/* Pass Detail Modal */}
-      <PassDetailModal
-        pass={viewingPass}
-        userRole={currentProfile.role}
-        onClose={() => setViewingPass(null)}
-        onPrint={(pass) => {
-          setViewingPass(null);
-          setPrintingPass(pass);
-        }}
-        onEdit={(pass) => {
-          setViewingPass(null);
-          setEditingPass(pass);
-          setIsFormModalOpen(true);
-        }}
-        onUploadDoc={(pass) => {
-          setUploadDocPass(pass);
-        }}
-        onUploadBill={(pass) => {
-          setUploadBillPass(pass);
-        }}
-        onToggleGateStatus={handleToggleGateStatus}
-        onToggleMaterialReturn={handleToggleMaterialReturn}
-        onAdvanceProcedureStage={handleAdvanceProcedureStage}
-      />
+      {viewingPass && (
+        <PassDetailModal
+          pass={viewingPass}
+          userRole={currentProfile.role}
+          onClose={() => setViewingPass(null)}
+          onPrint={(pass) => {
+            setViewingPass(null);
+            setPrintingPass(pass);
+          }}
+          onEdit={(pass) => {
+            setViewingPass(null);
+            setEditingPass(pass);
+            setIsFormModalOpen(true);
+          }}
+          onUploadDoc={(pass) => {
+            setUploadDocPass(pass);
+          }}
+          onUploadBill={(pass) => {
+            setUploadBillPass(pass);
+          }}
+          onToggleGateStatus={handleToggleGateStatus}
+          onToggleMaterialReturn={handleToggleMaterialReturn}
+          onAdvanceProcedureStage={handleAdvanceProcedureStage}
+        />
+      )}
 
       {/* Create / Edit Pass Modal (Admin) */}
-      <PassFormModal
-        pass={editingPass}
-        isOpen={isFormModalOpen}
-        onClose={() => {
-          setIsFormModalOpen(false);
-          setEditingPass(null);
-        }}
-        onSave={handleSavePass}
-      />
+      {isFormModalOpen && (
+        <PassFormModal
+          pass={editingPass}
+          isOpen={isFormModalOpen}
+          onClose={() => {
+            setIsFormModalOpen(false);
+            setEditingPass(null);
+          }}
+          onSave={handleSavePass}
+          existingPasses={passes}
+        />
+      )}
 
       {/* Excel Upload Modal (Admin) */}
-      <ExcelUploadModal
-        isOpen={isExcelModalOpen}
-        onClose={() => setIsExcelModalOpen(false)}
-        onImportPasses={handleImportPasses}
-      />
+      {isExcelModalOpen && (
+        <ExcelUploadModal
+          isOpen={isExcelModalOpen}
+          onClose={() => setIsExcelModalOpen(false)}
+          onImportPasses={handleImportPasses}
+        />
+      )}
 
       {/* Upload Approved Signed Pass Modal (Admin) */}
-      <UploadDocModal
-        pass={uploadDocPass}
-        isOpen={!!uploadDocPass}
-        onClose={() => setUploadDocPass(null)}
-        onSaveDoc={handleSaveDoc}
-      />
+      {uploadDocPass && (
+        <UploadDocModal
+          pass={uploadDocPass}
+          isOpen={true}
+          onClose={() => setUploadDocPass(null)}
+          onSaveDoc={handleSaveDoc}
+        />
+      )}
 
       {/* Upload Material Bill Modal (Admin) */}
-      <UploadBillModal
-        pass={uploadBillPass}
-        isOpen={!!uploadBillPass}
-        onClose={() => setUploadBillPass(null)}
-        onSaveBill={handleSaveBill}
-      />
+      {uploadBillPass && (
+        <UploadBillModal
+          pass={uploadBillPass}
+          isOpen={true}
+          onClose={() => setUploadBillPass(null)}
+          onSaveBill={handleSaveBill}
+        />
+      )}
 
       {/* Printable CISF Gate Badge Modal (Both Roles) */}
-      <PrintablePassModal
-        pass={printingPass}
-        onClose={() => setPrintingPass(null)}
-      />
+      {printingPass && (
+        <PrintablePassModal
+          pass={printingPass}
+          onClose={() => setPrintingPass(null)}
+        />
+      )}
 
       {/* User Switcher Modal */}
-      <RoleSwitcherModal
-        isOpen={isUserModalOpen}
-        onClose={() => setIsUserModalOpen(false)}
-        currentProfile={currentProfile}
-        onSelectUser={(user) => {
-          const updated = setActiveUserProfile(user.username);
-          setCurrentProfile(updated);
-          showToast(`Switched active profile to ${updated.name} (@${updated.username})`);
-        }}
-      />
+      {isUserModalOpen && (
+        <RoleSwitcherModal
+          isOpen={isUserModalOpen}
+          onClose={() => setIsUserModalOpen(false)}
+          currentProfile={currentProfile}
+          onSelectUser={(user) => {
+            const updated = setActiveUserProfile(user.username);
+            setCurrentProfile(updated);
+            showToast(`Switched active profile to ${updated.name} (@${updated.username})`);
+          }}
+        />
+      )}
     </div>
   );
 }

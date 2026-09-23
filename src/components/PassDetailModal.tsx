@@ -446,6 +446,19 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                     <span className="font-semibold text-emerald-800">Permanent Consignment to NMDC</span>
                   </div>
                 )}
+                {pass.vehicleNumber && (
+                  <div>
+                    <span className="text-slate-500 text-[11px] block">Transport Vehicle:</span>
+                    <span className="font-mono font-bold text-blue-900">{pass.vehicleNumber}</span>
+                    {pass.vehicleType && <span className="text-slate-500 text-[11px] ml-1">({pass.vehicleType})</span>}
+                  </div>
+                )}
+                {pass.recommendedBy && (
+                  <div className="sm:col-span-2">
+                    <span className="text-slate-500 text-[11px] block">Recommended By:</span>
+                    <span className="font-semibold text-slate-800">{pass.recommendedBy}</span>
+                  </div>
+                )}
               </div>
 
               {/* Material Items List with BOQ & Bill Fields */}
@@ -462,10 +475,9 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-[11px] font-semibold text-slate-700">
                         <th className="py-2 px-3">Item Description</th>
-                        <th className="py-2 px-3">BOQ Classification</th>
                         <th className="py-2 px-3">Quantity & Unit</th>
-                        <th className="py-2 px-3">Bill Number</th>
-                        <th className="py-2 px-3">Serial No / Asset #</th>
+                        <th className="py-2 px-3">Bill / Challan Number</th>
+                        <th className="py-2 px-3">Serial No / Tag #</th>
                         <th className="py-2 px-3">Remarks</th>
                       </tr>
                     </thead>
@@ -477,18 +489,6 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                               {item.itemName}
                               {item.specification && (
                                 <span className="text-[11px] text-slate-500 font-normal block">{item.specification}</span>
-                              )}
-                            </td>
-                            <td className="py-2 px-3">
-                              {item.isBoq ? (
-                                <span className="inline-flex items-center gap-1 font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded text-[10px]">
-                                  <Tag className="w-2.5 h-2.5 text-indigo-600" />
-                                  <span>BOQ Item ({item.boqItemNumber || 'Yes'})</span>
-                                </span>
-                              ) : (
-                                <span className="text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-[10px] font-medium">
-                                  Non-BOQ
-                                </span>
                               )}
                             </td>
                             <td className="py-2 px-3 font-semibold text-slate-800">
@@ -507,7 +507,7 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="py-3 px-3 text-center text-slate-400">
+                          <td colSpan={5} className="py-3 px-3 text-center text-slate-400">
                             No individual items listed.
                           </td>
                         </tr>

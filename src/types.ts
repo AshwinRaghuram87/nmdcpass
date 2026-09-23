@@ -23,10 +23,11 @@ export type ProcedureStage =
   | 'Pass Obtained';
 
 export const DESIGNATED_GATES = [
+  'KIOM/DIOM/PPT',
   'DIOM',
   'KIOM',
-  'Admin Building',
-  'PPT'
+  'PPT',
+  'Admin Building'
 ] as const;
 
 export type DesignatedGate = typeof DESIGNATED_GATES[number];
@@ -35,12 +36,27 @@ export type PassStatus = 'Approved' | 'Pending Approval' | 'In-Premises' | 'Exit
 
 export type MaterialReturnStatus = 'Pending Return' | 'Partially Returned' | 'Returned' | 'Overdue';
 
+export interface EmployeeCarriedItem {
+  id?: string;
+  slNo?: number | string;
+  itemName: string;
+  nos: number | string;
+  serialNumber?: string;
+}
+
 export interface PassEmployee {
   id: string;
   name: string;
   designation: string;
   idNumber: string; // Aadhaar / Voter ID / Govt ID
   contactNumber: string;
+  fatherName?: string;
+  sex?: string; // 'M' | 'F' | 'Male' | 'Female'
+  age?: number | string;
+  dob?: string;
+  address?: string;
+  allowedToCarry?: boolean;
+  carriedItems?: EmployeeCarriedItem[];
 }
 
 export interface MaterialItem {
@@ -132,6 +148,8 @@ export interface EntryPass {
   workOrderNo?: string; // e.g., 'Letters of Awards of Contract(LAC) Dated 27/04/2026 Vide HO(contract)/NMDC/UMLMSS/2025/275/395...'
   stepneyAttachment?: string; // Attachment / Stepney details
   vehicleCondition?: 'Loaded' | 'Empty'; // 'Loaded' | 'Empty'
+  recommendedBy?: string; // e.g. 'Mr. AVL Ramakrishna, Dy. GM( C&IT) , Engineer-in-Charge'
+  recommendedDate?: string;
   
   // Approved Pass Document (Uploaded signed/received pass & downloadable link)
   approvedDocument?: ApprovedDocument;
