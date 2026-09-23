@@ -47,13 +47,13 @@ export const PrintablePassModal: React.FC<PrintablePassModalProps> = ({ pass, on
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-[10px] uppercase tracking-widest font-bold text-slate-500">
-                  National Mineral Development Corporation Ltd (NMDC)
+                  Client: NMDC , Donimalai
                 </div>
                 <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase mt-0.5">
                   Security Gate Entry Pass
                 </h1>
                 <div className="text-xs font-semibold text-blue-700 mt-0.5">
-                  Vendor: Amnex Infotechnologies Pvt. Ltd.
+                  Vendor: Amnex Infotechnologies Pvt. Ltd. • Admin: Ashwin R.
                 </div>
               </div>
 

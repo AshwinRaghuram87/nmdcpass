@@ -100,7 +100,7 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                   CISF Security Entry Pass & Material Follow-Up Record
                 </h2>
                 <div className="text-[11px] text-slate-400 mt-0.5">
-                  Amnex Infotechnologies • Client: NMDC Ltd • Monitored at {pass.gateNumber}
+                  Amnex Infotechnologies • Client: NMDC , Donimalai • Monitored at {pass.gateNumber}
                 </div>
               </div>
             </div>

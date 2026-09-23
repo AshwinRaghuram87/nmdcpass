@@ -423,8 +423,8 @@ export function exportPassesToExcel(passes: EntryPass[]): void {
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Amnex_NMDC_Passes');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'NMDC_Donimalai_Passes');
 
   const dateStr = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(workbook, `Amnex_NMDC_Entry_Passes_Report_${dateStr}.xlsx`);
+  XLSX.writeFile(workbook, `Amnex_NMDC_Donimalai_Entry_Passes_${dateStr}.xlsx`);
 }

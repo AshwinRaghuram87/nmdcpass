@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { EntryPass, PassType, MaterialReturnType, UserProfile, UserRole, ApprovedDocument, ProcedureStage } from './types';
-import { loadStoredPasses, saveStoredPasses, clearAllPasses } from './utils/storage';
+import { loadStoredPasses, saveStoredPasses, clearAllPasses, fetchPassesFromCloud } from './utils/storage';
 import { exportPassesToExcel } from './utils/excelHelper';
 import { Header } from './components/Header';
 import { StatsCards } from './components/StatsCards';
@@ -11,23 +11,22 @@ import { PassFormModal } from './components/PassFormModal';
 import { ExcelUploadModal } from './components/ExcelUploadModal';
 import { UploadDocModal } from './components/UploadDocModal';
 import { UploadBillModal } from './components/UploadBillModal';
-import { RoleSwitcherModal } from './components/RoleSwitcherModal';
 import { PrintablePassModal } from './components/PrintablePassModal';
+import { PassReportModal } from './components/PassReportModal';
 import { ShieldCheck, AlertTriangle, CheckCircle, Package, Receipt, RotateCcw } from 'lucide-react';
 
 export default function App() {
   const [passes, setPasses] = useState<EntryPass[]>(() => loadStoredPasses());
 
-  // Role Based Access Control State
-  const [currentProfile, setCurrentProfile] = useState<UserProfile>({
-    id: 'user-admin-1',
-    name: 'Sanjay Sharma',
-    role: 'admin', // Default: Admin can upload data & signed passes; switchable to 'user'
-    email: 'sanjay.sharma@amnex.com',
+  // Dedicated Single User & Admin: Ashwin R. (No login, no auth)
+  const [currentProfile] = useState<UserProfile>({
+    id: 'user-admin-ashwin',
+    name: 'Ashwin R.',
+    role: 'admin',
+    email: 'ashwin.r@amnex.com',
     organization: 'Amnex Infotechnologies / NMDC Security Control',
-    designation: 'NMDC Project Manager & Site Admin'
+    designation: 'NMDC Project Lead & System Admin'
   });
-  const [isRoleSwitcherOpen, setIsRoleSwitcherOpen] = useState(false);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,9 +49,19 @@ export default function App() {
   const [uploadDocPass, setUploadDocPass] = useState<EntryPass | null>(null);
   const [uploadBillPass, setUploadBillPass] = useState<EntryPass | null>(null);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Sync to local storage on changes
+  // Initial cloud fetch from Vercel KV if available
+  useEffect(() => {
+    fetchPassesFromCloud().then((res) => {
+      if (res && res.passes) {
+        setPasses(res.passes);
+      }
+    });
+  }, []);
+
+  // Sync to local storage & Vercel KV on changes
   useEffect(() => {
     saveStoredPasses(passes);
   }, [passes]);
@@ -63,31 +72,6 @@ export default function App() {
     setTimeout(() => {
       setNotification(null);
     }, 4000);
-  };
-
-  // Role switch handler
-  const handleSelectRole = (role: UserRole) => {
-    if (role === 'admin') {
-      setCurrentProfile({
-        id: 'user-admin-1',
-        name: 'Sanjay Sharma',
-        role: 'admin',
-        email: 'sanjay.sharma@amnex.com',
-        organization: 'Amnex Infotechnologies / NMDC Security Control',
-        designation: 'NMDC Project Manager & Site Admin'
-      });
-      showToast('Switched to Admin account (Full access to upload data, signed passes & bills).');
-    } else {
-      setCurrentProfile({
-        id: 'user-viewer-1',
-        name: 'Rajeev Ranjan',
-        role: 'user',
-        email: 'cisf.gate1.nmdc@gov.in',
-        organization: 'CISF Security Gate Unit / NMDC Plant',
-        designation: 'Gate Duty Officer / Authorized Viewer'
-      });
-      showToast('Switched to User account (Read-only view with download pass & bill permissions).');
-    }
   };
 
   // Filtered passes calculation
@@ -480,10 +464,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Corporate Header with Role Indicator */}
+      {/* Main Corporate Header with Dedicated Single Admin Ashwin R. */}
       <Header
         currentProfile={currentProfile}
-        onOpenRoleSwitcher={() => setIsRoleSwitcherOpen(true)}
+        onOpenReportModal={() => setIsReportModalOpen(true)}
         onOpenNewPassModal={() => {
           setEditingPass(null);
           setIsFormModalOpen(true);
@@ -636,20 +620,19 @@ export default function App() {
             <ShieldCheck className="w-4 h-4 text-blue-600" />
             <span className="font-semibold text-slate-800">Amnex Infotechnologies Pvt. Ltd.</span>
             <span>•</span>
-            <span>Client: NMDC Ltd (Navratna PSU - Bailadila Project)</span>
+            <span className="font-semibold text-blue-900">Client: NMDC , Donimalai</span>
           </div>
           <div className="text-slate-400 text-[11px]">
-            Gate Access Control & Security Monitored by Central Industrial Security Force (CISF)
+            Admin: Ashwin R. • Security Monitored by Central Industrial Security Force (CISF)
           </div>
         </div>
       </footer>
 
-      {/* Role Switcher Modal */}
-      <RoleSwitcherModal
-        isOpen={isRoleSwitcherOpen}
-        onClose={() => setIsRoleSwitcherOpen(false)}
-        currentProfile={currentProfile}
-        onSelectRole={handleSelectRole}
+      {/* Passes Issued Audit & Material Movement Report Modal (RGP vs NRGP) */}
+      <PassReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        passes={passes}
       />
 
       {/* Pass Detail Modal */}
