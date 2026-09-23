@@ -6,6 +6,7 @@ import {
   Plus, 
   Upload, 
   RotateCcw, 
+  Trash2,
   User, 
   Shield, 
   Lock, 
@@ -170,15 +171,16 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Reset to sample data */}
+            {/* Clear All Records */}
             {isAdmin && (
               <button
-                id="btn-reset-sample"
+                id="btn-clear-all-data"
                 onClick={onResetData}
-                title="Reset to official sample dataset"
-                className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                title="Delete all records and start with empty database"
+                className="inline-flex items-center gap-1.5 p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-xs">Clear Records</span>
               </button>
             )}
           </div>

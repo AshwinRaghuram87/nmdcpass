@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { EntryPass, PassType, MaterialReturnType, UserProfile, UserRole, ApprovedDocument, ProcedureStage } from './types';
-import { loadStoredPasses, saveStoredPasses, resetToDefaultPasses } from './utils/storage';
+import { loadStoredPasses, saveStoredPasses, clearAllPasses } from './utils/storage';
 import { exportPassesToExcel } from './utils/excelHelper';
 import { Header } from './components/Header';
 import { StatsCards } from './components/StatsCards';
@@ -462,11 +462,11 @@ export default function App() {
     showToast(`Successfully imported ${newPasses.length} passes from Excel!`);
   };
 
-  const handleResetData = () => {
-    if (window.confirm('Reset the database to the official Amnex - NMDC Ltd sample dataset?')) {
-      const reset = resetToDefaultPasses();
+  const handleClearAllData = () => {
+    if (window.confirm('Delete all test records and start with a clean, empty database?')) {
+      const reset = clearAllPasses();
       setPasses(reset);
-      showToast('Database reset to official default dataset.');
+      showToast('All test records deleted. Database is now clean and ready.');
     }
   };
 
@@ -490,7 +490,7 @@ export default function App() {
         }}
         onOpenExcelModal={() => setIsExcelModalOpen(true)}
         onExportExcel={() => exportPassesToExcel(passes)}
-        onResetData={handleResetData}
+        onResetData={handleClearAllData}
         totalPasses={passes.length}
       />
 
@@ -621,6 +621,11 @@ export default function App() {
           onToggleGateStatus={handleToggleGateStatus}
           onToggleMaterialReturn={handleToggleMaterialReturn}
           onAdvanceProcedureStage={handleAdvanceProcedureStage}
+          onOpenNewPassModal={() => {
+            setEditingPass(null);
+            setIsFormModalOpen(true);
+          }}
+          onOpenExcelModal={() => setIsExcelModalOpen(true)}
         />
       </main>
 

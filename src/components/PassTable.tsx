@@ -35,7 +35,9 @@ import {
   Layers,
   Tag,
   Shield,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface PassTableProps {
@@ -50,6 +52,8 @@ interface PassTableProps {
   onToggleGateStatus: (pass: EntryPass) => void;
   onToggleMaterialReturn: (pass: EntryPass) => void;
   onAdvanceProcedureStage?: (pass: EntryPass, nextStage: ProcedureStage) => void;
+  onOpenNewPassModal?: () => void;
+  onOpenExcelModal?: () => void;
 }
 
 export const PassTable: React.FC<PassTableProps> = ({
@@ -63,7 +67,9 @@ export const PassTable: React.FC<PassTableProps> = ({
   onUploadBillClick,
   onToggleGateStatus,
   onToggleMaterialReturn,
-  onAdvanceProcedureStage
+  onAdvanceProcedureStage,
+  onOpenNewPassModal,
+  onOpenExcelModal
 }) => {
   const isAdmin = userRole === 'admin';
   const [expandedPassId, setExpandedPassId] = useState<string | null>(null);
@@ -269,14 +275,34 @@ export const PassTable: React.FC<PassTableProps> = ({
 
   if (passes.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-        <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-          <FileText className="w-6 h-6" />
+      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-2xs">
+        <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3.5 border border-blue-100">
+          <FileText className="w-7 h-7" />
         </div>
-        <h3 className="text-sm font-bold text-slate-800">No entry passes match the current criteria</h3>
-        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-          Try adjusting your search terms, pass type tabs (Employee, Contractor, Vehicle, Materials), or filter selections.
+        <h3 className="text-base font-bold text-slate-800">Clean Database Ready</h3>
+        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
+          All test data has been deleted. You can now register genuine entry passes or upload your official Excel / CSV pass register.
         </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {isAdmin && onOpenNewPassModal && (
+            <button
+              onClick={onOpenNewPassModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Create First Entry Pass</span>
+            </button>
+          )}
+          {isAdmin && onOpenExcelModal && (
+            <button
+              onClick={onOpenExcelModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white shadow-xs transition cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Upload Excel Sheet</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }

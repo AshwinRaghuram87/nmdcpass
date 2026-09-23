@@ -1,17 +1,19 @@
 import { EntryPass, ProcedureStage, DESIGNATED_GATES } from '../types';
 import { INITIAL_PASSES } from '../data/initialPasses';
 
-const STORAGE_KEY = 'amnex_nmdc_entry_passes_v2';
+const STORAGE_KEY = 'amnex_nmdc_entry_passes_v3_clean';
 
 export function loadStoredPasses(): EntryPass[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      saveStoredPasses(INITIAL_PASSES);
-      return INITIAL_PASSES;
+    if (raw === null) {
+      // Clean start: initialize with empty list
+      saveStoredPasses([]);
+      return [];
     }
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
+    if (Array.isArray(parsed)) {
+      if (parsed.length === 0) return [];
       const today = new Date().toISOString().split('T')[0];
       return parsed.map((p: any) => {
         // Normalize designated gate
@@ -67,10 +69,10 @@ export function loadStoredPasses(): EntryPass[] {
         };
       });
     }
-    return INITIAL_PASSES;
+    return [];
   } catch (err) {
     console.error('Failed to read passes from storage', err);
-    return INITIAL_PASSES;
+    return [];
   }
 }
 
@@ -82,7 +84,13 @@ export function saveStoredPasses(passes: EntryPass[]): void {
   }
 }
 
-export function resetToDefaultPasses(): EntryPass[] {
-  saveStoredPasses(INITIAL_PASSES);
-  return INITIAL_PASSES;
+export function clearAllPasses(): EntryPass[] {
+  saveStoredPasses([]);
+  return [];
 }
+
+export function resetToDefaultPasses(): EntryPass[] {
+  saveStoredPasses([]);
+  return [];
+}
+
