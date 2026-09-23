@@ -1,10 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from '@vercel/postgres';
 import { kv } from '@vercel/kv';
 
 const KV_PASSES_KEY = 'nmdc_donimalai_entry_passes';
 
+async function initPostgresTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS nmdc_passes_store (
+      id VARCHAR(50) PRIMARY KEY,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -14,31 +24,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  // Check if KV credentials are configured
+  const isPostgresConfigured = !!(process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
   const isKvConfigured = !!(
     (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ||
     process.env.KV_URL
   );
 
   try {
+    // ----------------------------------------------------
+    // GET: Retrieve Passes from Postgres or KV or Fallback
+    // ----------------------------------------------------
     if (req.method === 'GET') {
-      if (!isKvConfigured) {
-        return res.status(200).json({
-          status: 'fallback',
-          source: 'local_fallback',
-          message: 'Vercel KV not connected yet. Storing locally in browser.',
-          passes: null
-        });
+      // 1. Check Postgres (Neon)
+      if (isPostgresConfigured) {
+        try {
+          await initPostgresTable();
+          const { rows } = await sql`
+            SELECT data FROM nmdc_passes_store WHERE id = 'latest_passes' LIMIT 1;
+          `;
+          const passesData = rows.length > 0 ? rows[0].data : [];
+          return res.status(200).json({
+            status: 'success',
+            source: 'vercel_postgres',
+            passes: passesData
+          });
+        } catch (dbErr: any) {
+          console.error('Postgres read error:', dbErr);
+        }
       }
 
-      const stored = await kv.get(KV_PASSES_KEY);
+      // 2. Check KV (Upstash)
+      if (isKvConfigured) {
+        try {
+          const stored = await kv.get(KV_PASSES_KEY);
+          return res.status(200).json({
+            status: 'success',
+            source: 'vercel_kv',
+            passes: stored || []
+          });
+        } catch (kvErr: any) {
+          console.error('KV read error:', kvErr);
+        }
+      }
+
+      // 3. Fallback to client localStorage
       return res.status(200).json({
-        status: 'success',
-        source: 'vercel_kv',
-        passes: stored || []
+        status: 'fallback',
+        source: 'local_fallback',
+        message: 'No Vercel Storage connected yet. Operating in local storage mode.',
+        passes: null
       });
     }
 
+    // ----------------------------------------------------
+    // POST: Store Passes in Postgres or KV
+    // ----------------------------------------------------
     if (req.method === 'POST') {
       const { passes } = req.body || {};
 
@@ -46,19 +86,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Invalid passes payload: expected array' });
       }
 
-      if (!isKvConfigured) {
-        return res.status(200).json({
-          status: 'fallback',
-          source: 'local_fallback',
-          message: 'Vercel KV credentials not set in environment. Saved in browser.',
-          count: passes.length
-        });
+      // 1. Try Postgres
+      if (isPostgresConfigured) {
+        try {
+          await initPostgresTable();
+          const jsonString = JSON.stringify(passes);
+          await sql`
+            INSERT INTO nmdc_passes_store (id, data, updated_at)
+            VALUES ('latest_passes', ${jsonString}::jsonb, CURRENT_TIMESTAMP)
+            ON CONFLICT (id)
+            DO UPDATE SET data = ${jsonString}::jsonb, updated_at = CURRENT_TIMESTAMP;
+          `;
+          return res.status(200).json({
+            status: 'success',
+            source: 'vercel_postgres',
+            count: passes.length
+          });
+        } catch (dbErr: any) {
+          console.error('Postgres write error:', dbErr);
+        }
       }
 
-      await kv.set(KV_PASSES_KEY, passes);
+      // 2. Try KV
+      if (isKvConfigured) {
+        try {
+          await kv.set(KV_PASSES_KEY, passes);
+          return res.status(200).json({
+            status: 'success',
+            source: 'vercel_kv',
+            count: passes.length
+          });
+        } catch (kvErr: any) {
+          console.error('KV write error:', kvErr);
+        }
+      }
+
+      // 3. Fallback
       return res.status(200).json({
-        status: 'success',
-        source: 'vercel_kv',
+        status: 'fallback',
+        source: 'local_fallback',
+        message: 'No cloud database connected in Vercel. Storing locally in browser.',
         count: passes.length
       });
     }
