@@ -4,6 +4,7 @@ import { formatGatePassNumber } from '../utils/passUtils';
 import { 
   X, 
   Printer, 
+  Download,
   ShieldCheck, 
   Plus, 
   Trash2, 
@@ -367,7 +368,7 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
               </label>
             )}
 
-            {/* Print button */}
+            {/* Print and Export A4 PDF buttons */}
             <button
               type="button"
               onClick={handlePrint}
@@ -375,6 +376,15 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print / Save PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              title="Export formatted A4 PDF (Select Save as PDF and A4 size in print dialog)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export A4 PDF</span>
             </button>
 
             {/* Close modal */}
@@ -391,25 +401,6 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
 
         {/* Modal Scroll Body */}
         <div className="p-4 sm:p-8 bg-slate-100 overflow-y-auto max-h-[85vh] print:p-0 print:m-0 print:max-h-none print:overflow-visible print:bg-white">
-          <style>{`
-            @media print {
-              @page {
-                size: A4;
-                margin: 10mm;
-              }
-              body {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
-              }
-              .print-page-container {
-                page-break-after: always;
-                break-after: page;
-                height: 297mm;
-                box-sizing: border-box;
-                overflow: hidden;
-              }
-            }
-          `}</style>
           
           {printLayout === 'standard' ? (
             /* =========================================================================

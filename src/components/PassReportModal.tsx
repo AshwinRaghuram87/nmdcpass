@@ -153,6 +153,14 @@ export const PassReportModal: React.FC<PassReportModalProps> = ({
               <span>Print Report</span>
             </button>
             <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs"
+              title="Export A4 PDF report"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export A4 PDF</span>
+            </button>
+            <button
               onClick={onClose}
               className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
             >
