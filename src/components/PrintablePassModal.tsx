@@ -1016,354 +1016,390 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
             </div>
           ) : printLayout === 'materials' ? (
             /* =========================================================================
-               SEPARATE MATERIALS ENTRY PASS FORMAT (Exact PDF Page 1 & Page 2)
+               SEPARATE MATERIALS ENTRY PASS FORMAT (Exact PDF Replica)
                ========================================================================= */
             <div className="space-y-6">
               {/* -------------------------------------------------------------
                   PAGE 1: MATERIAL ENTRY PASS & AUTHORIZATION
                   ------------------------------------------------------------- */}
-              <div className="page-break-after bg-white p-6 sm:p-8 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-tight text-[10pt]">
-                {/* Header */}
-                <div className="text-center font-bold space-y-0.5 mb-2.5">
-                  <div className="text-sm sm:text-base tracking-wider uppercase font-black font-serif">
-                    DONIMALAI IRON ORE MINE
+              <div className="bg-white p-6 sm:p-8 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-tight text-[9.5pt]">
+                {/* Exact PDF Header */}
+                <div className="border border-black flex mb-2">
+                  <div className="w-[15%] border-r border-black p-1 flex items-center justify-center">
+                    <img 
+                      src="/nmdc_logo.jpg" 
+                      alt="NMDC Logo" 
+                      className="max-h-16 w-auto object-contain"
+                    />
                   </div>
-                  <div className="text-xs sm:text-sm tracking-wide font-black uppercase underline decoration-1 underline-offset-4">
-                    ENTRY PASS ({pass.materialCategory === 'Non-Returnable' ? 'Non -Returnable' : 'Returnable'})
+                  <div className="w-[65%] border-r border-black flex flex-col text-center font-bold">
+                    <div className="border-b border-black py-0.5 text-[11pt] uppercase tracking-wider font-black">
+                      DONIMALAI COMPLEX
+                    </div>
+                    <div className="border-b border-black py-0.5 text-[7.5pt] px-1 uppercase leading-tight font-bold">
+                      INTEGRATED MANAGEMENT SYSTEM<br/>
+                      <span className="text-[6.5pt] font-bold font-sans">(ISO 9001:2015, ISO 14001:2015, OHSAS 45001:2018, SA 8000:2014)</span>
+                    </div>
+                    <div className="border-b border-black py-0.5 text-[9pt] uppercase tracking-tight font-black">
+                      STANDARD OPERATING PROCEDURE (SOP)
+                    </div>
+                    <div className="py-0.5 text-[8.5pt] font-bold leading-tight flex flex-col justify-center flex-1">
+                      <div>Material Gate Pass Entry at CISF Check Post</div>
+                      <div className="font-black uppercase">{pass.materialCategory === 'Non-Returnable' ? 'Non-Returnable' : 'Returnable'} Material Gate Pass</div>
+                    </div>
                   </div>
-                  <div className="text-[8.5pt] font-semibold italic text-slate-800 font-serif">
-                    (To be issued by the concerned Head of Department)
+                  <div className="w-[20%] flex flex-col text-[7.5pt] font-bold p-1 justify-center border-l-0">
+                    <div className="border-b border-black pb-0.5 mb-0.5">Revision No. 00</div>
+                    <div className="border-b border-black pb-0.5 mb-0.5">Issue No: 01</div>
+                    <div>Date: 16.09.2026</div>
                   </div>
+                </div>
+
+                <div className="flex justify-between text-[8pt] font-bold italic mb-1">
+                  <div>(To be issued by the concerned Head of Department)</div>
+                  <div className="not-italic uppercase">Annexure-I</div>
                 </div>
 
                 {/* Top Details Table */}
-                <table className="w-full border-collapse border border-black text-[9pt] sm:text-[9.5pt] mb-2">
+                <table className="w-full border-collapse border border-black text-[7.5pt] mb-1">
                   <tbody>
-                    <tr className="border border-black">
-                      <td className="w-[38%] py-1 px-2 font-bold border-r border-black align-top">
-                        Name of department
+                    <tr className="border-b border-black">
+                      <td className="w-[45%] py-0.5 px-2 font-bold border-r border-black">
+                        Name of Department
                       </td>
-                      <td className="py-1 px-2 font-bold align-top">
+                      <td className="py-0.5 px-2 font-bold uppercase">
                         {departmentName}
                       </td>
                     </tr>
-                    <tr className="border border-black">
-                      <td className="py-1 px-2 font-bold border-r border-black align-top">
-                        Gate Pass No. & Date
+                    <tr className="border-b border-black">
+                      <td className="py-0.5 px-2 font-bold border-r border-black">
+                        Gatepass No & Date
                       </td>
-                      <td className="py-1 px-2 align-top">
+                      <td className="py-0.5 px-2">
                         <span className="font-bold">{gatePassNo}</span>
-                        <span className="ml-4 font-semibold">Dt. -{gatePassDate}</span>
+                        <span className="ml-24 font-semibold">{gatePassDate} No</span>
                       </td>
                     </tr>
-                    <tr className="border border-black">
-                      <td className="py-1 px-2 border-r border-black align-top">
-                        <span className="font-bold mr-1">1.</span>
-                        <span className="font-semibold">Name of Contractor/firm</span>
+                    <tr className="border-b border-black">
+                      <td className="py-0.5 px-2 border-r border-black">
+                        <span className="font-bold mr-2">1.</span>
+                        <span className="font-semibold">Name of Contractor/Firm</span>
                       </td>
-                      <td className="py-1 px-2 font-bold align-top">
+                      <td className="py-0.5 px-2 font-bold uppercase">
                         {contractorName}
                       </td>
                     </tr>
-                    <tr className="border border-black">
-                      <td className="py-1 px-2 border-r border-black align-top">
-                        <span className="font-bold mr-1">2.</span>
-                        <div className="inline font-semibold">
-                          Name of work and<br />
-                          Reason for entry / exit
-                        </div>
+                    <tr className="border-b border-black">
+                      <td className="py-0.5 px-2 border-r border-black">
+                        <span className="font-bold mr-2">2.</span>
+                        <span className="font-semibold">Name of Work/Purpose</span>
                       </td>
-                      <td className="py-1 px-2 align-top">
+                      <td className="py-0.5 px-2 font-bold">
                         {nameOfWork}
                       </td>
                     </tr>
-                    <tr className="border border-black">
-                      <td className="py-1 px-2 border-r border-black align-top">
-                        <span className="font-bold mr-1">3</span>
+                    <tr className="border-b border-black">
+                      <td className="py-0.5 px-2 border-r border-black">
+                        <span className="font-bold mr-2">3.</span>
                         <span className="font-semibold">Work Site/Location</span>
                       </td>
-                      <td className="py-1 px-2 font-bold align-top">
+                      <td className="py-0.5 px-2 font-bold uppercase">
                         {workSiteLocation}
                       </td>
                     </tr>
-                    <tr className="border border-black">
-                      <td className="py-1 px-2 border-r border-black align-top">
-                        <span className="font-bold mr-1">4</span>
-                        <span className="font-semibold">Work order No./LOI/Authority Letter</span>
+                    <tr className="border-b border-black">
+                      <td className="py-0.5 px-2 border-r border-black">
+                        <span className="font-bold mr-2">4.</span>
+                        <span className="font-semibold">Workorder No/LOI/Authority Letter</span>
                       </td>
-                      <td className="py-1 px-2 align-top whitespace-pre-line text-[8pt] sm:text-[8.5pt] leading-tight">
+                      <td className="py-0.5 px-2 text-[7pt] leading-tight whitespace-pre-line">
                         {defaultWorkOrder}
                       </td>
                     </tr>
-                    <tr className="border border-black">
-                      <td className="py-1 px-2 border-r border-black align-top">
-                        <span className="font-bold mr-1">5</span>
-                        <span className="font-semibold">Validity of Gate Pass (Date &Time)</span>
+                    <tr className="border-b border-black">
+                      <td className="py-0.5 px-2 border-r border-black">
+                        <span className="font-bold mr-2">5.</span>
+                        <span className="font-semibold">Validity of Gatepass</span>
                       </td>
-                      <td className="py-1 px-2 font-bold align-top">
+                      <td className="py-0.5 px-2 font-bold">
                         {gatePassDate} to {validToDate}
                       </td>
                     </tr>
+                    <tr className="border-b border-black">
+                      <td className="py-0.5 px-2 border-r border-black">
+                        <span className="font-bold mr-2">6.</span>
+                        <span className="font-semibold">No. Of Persons Allowed</span>
+                      </td>
+                      <td className="py-0.5 px-2 font-bold">
+                        {String(employeesList.length).padStart(2, '0')}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
 
-                {/* Vehicle Table 1 */}
-                <table className="w-full border-collapse border border-black text-[9pt] sm:text-[9.5pt] mb-2 text-center">
+                {/* Details of Persons */}
+                <div className="font-bold text-[8pt] mb-0.5">Details of Persons:</div>
+                <table className="w-full border-collapse border border-black text-[7pt] mb-1">
                   <thead>
-                    <tr className="border border-black">
-                      <th className="w-[12%] py-1 px-2 border-r border-black font-bold">Sl.No.</th>
-                      <th className="w-[26%] py-1 px-2 border-r border-black font-bold">Type of vehicle</th>
-                      <th className="w-[26%] py-1 px-2 border-r border-black font-bold">Regn. No.</th>
-                      <th className="py-1 px-2 font-bold">Attachment/Stepney if Any</th>
+                    <tr className="border-b border-black text-left font-bold">
+                      <th className="w-[5%] border-r border-black p-0.5">Sl.<br/>No</th>
+                      <th className="w-[30%] border-r border-black p-0.5 pl-1">Name</th>
+                      <th className="w-[8%] border-r border-black p-0.5">Sex</th>
+                      <th className="w-[7%] border-r border-black p-0.5 text-center">Age</th>
+                      {employeesList.length > 1 && (
+                        <>
+                          <th className="w-[5%] border-r border-black p-0.5">Sl.No</th>
+                          <th className="w-[30%] border-r border-black p-0.5 pl-1">Name</th>
+                          <th className="w-[8%] border-r border-black p-0.5">Sex</th>
+                          <th className="w-[7%] p-0.5 text-center">Age</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
-                    {vehicleList.map((v) => (
-                      <tr key={v.slNo} className="border border-black">
-                        <td className="py-1 px-2 border-r border-black font-bold">{v.slNo}</td>
-                        <td className="py-1 px-2 border-r border-black">{v.type}</td>
-                        <td className="py-1 px-2 border-r border-black font-bold tracking-wider">{v.regnNo}</td>
-                        <td className="py-1 px-2 text-slate-700">{v.stepney}</td>
+                    {employeesList.length > 1 ? (
+                      [...Array(Math.ceil(employeesList.length / 2))].map((_, i) => {
+                        const p1 = employeesList[i * 2];
+                        const p2 = employeesList[i * 2 + 1];
+                        return (
+                          <tr key={i} className="border-b border-black last:border-b-0 h-4">
+                            <td className="border-r border-black p-0.5 text-center font-bold">{i * 2 + 1}.</td>
+                            <td className="border-r border-black p-0.5 pl-1 font-bold uppercase">{p1?.name || ""}</td>
+                            <td className="border-r border-black p-0.5 uppercase">{p1?.sex || ""}</td>
+                            <td className="border-r border-black p-0.5 text-center font-bold">{p1?.age || ""}</td>
+                            <td className="border-r border-black p-0.5 text-center font-bold">{i * 2 + 2}.</td>
+                            <td className="border-r border-black p-0.5 pl-1 font-bold uppercase">{p2?.name || ""}</td>
+                            <td className="border-r border-black p-0.5 uppercase">{p2?.sex || ""}</td>
+                            <td className="p-0.5 text-center font-bold">{p2?.age || ""}</td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr className="h-4">
+                        <td className="border-r border-black p-0.5 text-center font-bold">1.</td>
+                        <td className="border-r border-black p-0.5 pl-1 font-bold uppercase">{employeesList[0]?.name || ""}</td>
+                        <td className="border-r border-black p-0.5 uppercase">{employeesList[0]?.sex || ""}</td>
+                        <td className="border-r border-black p-0.5 text-center font-bold">{employeesList[0]?.age || ""}</td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
 
-                {/* Vehicle Permission Text */}
-                <div className="text-[8.5pt] sm:text-[9pt] mb-1.5 font-medium leading-tight">
-                  The following vehicle(s)/ may please be allowed to ENTRY ({pass.materialCategory === 'Non-Returnable' ? 'Non Returnable' : 'Returnable'}) the check post for the above purpose.
-                </div>
-
-                {/* Second Table: Vehicle Condition & Material Items with blue nested header */}
-                <table className="w-full border-collapse border border-black text-[8.5pt] sm:text-[9pt] mb-2">
+                {/* Details of Vehicle */}
+                <div className="font-bold text-[8pt] mb-0.5">Details of Vehicle:</div>
+                <table className="w-full border-collapse border border-black text-[7pt] text-center mb-1">
                   <thead>
-                    <tr className="border border-black text-center font-bold">
-                      <th className="w-[8%] py-1 px-1 border-r border-black align-middle">Sl.No.</th>
-                      <th className="w-[16%] py-1 px-1 border-r border-black align-middle">Type of<br />vehicle</th>
-                      <th className="w-[18%] py-1 px-1 border-r border-black align-middle">Regn.<br />No.</th>
-                      <th className="w-[14%] py-1 px-1 border-r border-black align-middle">
-                        Condition<br />
-                        <span className="font-semibold text-[8pt]">Loaded /empty</span>
-                      </th>
-                      <th className="py-1 px-1 font-bold align-middle">
-                        {pass.materialCategory === 'Non-Returnable' ? 'Non Returnable Items' : 'Returnable Items'}
-                      </th>
+                    <tr className="border-b border-black font-bold">
+                      <th className="w-[5%] border-r border-black p-0.5">Sl.<br/>No</th>
+                      <th className="w-[35%] border-r border-black p-0.5">Type of Vehicle</th>
+                      <th className="w-[20%] border-r border-black p-0.5">Registration No</th>
+                      <th className="w-[20%] border-r border-black p-0.5 leading-tight">Condition<br/>Loaded/Empty</th>
+                      <th className="w-[20%] p-0.5 leading-tight">Attachment<br/>Stepney if any</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border border-black">
-                      <td className="py-1.5 px-1 border-r border-black text-center font-bold align-middle">
-                        1
-                      </td>
-                      <td className="py-1.5 px-1 border-r border-black text-center align-middle font-medium">
-                        {pass.vehicleType || 'Mahindra Bolero'}
-                      </td>
-                      <td className="py-1.5 px-1 border-r border-black text-center align-middle font-bold tracking-wider text-[8.5pt] leading-tight whitespace-pre-line">
-                        {vehicleList.length > 1 
-                          ? vehicleList.map(v => v.regnNo).join('\nAND\n') 
-                          : (vehicleList[0]?.regnNo || 'KA-35b 3096\nAND\nKA-35b 9203')}
-                      </td>
-                      <td className="py-1.5 px-1 border-r border-black text-center align-middle font-semibold">
-                        Loaded
-                      </td>
-                      <td className="p-0 align-top">
-                        {/* Nested Sub-Table for Material Particulars */}
-                        <table className="w-full border-collapse border-0 text-[8.5pt] sm:text-[9pt]">
-                          <thead>
-                            <tr className="bg-[#85c1e9] border-b border-black text-center font-bold text-black">
-                              <th className="w-[14%] py-1 px-1 border-r border-black">S/N</th>
-                              <th className="py-1 px-1 border-r border-black">PERTICULARS</th>
-                              <th className="w-[34%] py-1 px-1">QTY/METERS</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {itemsList.map((item, idx) => (
-                              <tr key={item.id || idx} className="border-b border-black last:border-b-0 font-bold text-black">
-                                <td className="py-1 px-1 border-r border-black text-center">{idx + 1}</td>
-                                <td className="py-1 px-1 border-r border-black text-left pl-2 font-bold">{item.itemName}</td>
-                                <td className="py-1 px-1 text-center font-bold">{item.quantity} {item.unit || 'TRUCKS'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </td>
-                    </tr>
+                    {vehicleList.length > 0 ? (
+                      vehicleList.map((v, i) => (
+                        <tr key={i} className="border-b border-black last:border-b-0 h-5">
+                          <td className="border-r border-black p-0.5 font-bold">{i + 1}</td>
+                          <td className="border-r border-black p-0.5 font-bold uppercase">{v.type}</td>
+                          <td className="border-r border-black p-0.5 font-black uppercase tracking-wider">{v.regnNo}</td>
+                          <td className="border-r border-black p-0.5 font-bold uppercase">Loaded</td>
+                          <td className="p-0.5 text-[6.5pt] uppercase">{v.stepney || "NIL"}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr className="h-5">
+                        <td className="border-r border-black p-0.5 font-bold">1</td>
+                        <td className="border-r border-black p-0.5 font-bold">{pass.vehicleType || "Mahindra Bolero"}</td>
+                        <td className="border-r border-black p-0.5 font-black uppercase tracking-wider">{pass.vehicleNumber || "KA 35 P 4102"}</td>
+                        <td className="border-r border-black p-0.5 font-bold uppercase">Loaded</td>
+                        <td className="p-0.5 text-[6.5pt] uppercase">NIL</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
 
-                {/* Gate Pass Issued By Table (Checked By, Recommended By & Signed By HOD) */}
-                <div className="text-[8.5pt] sm:text-[9pt] mb-2">
-                  <div className="font-bold mb-0.5 italic">Gate pass issued by:</div>
-                  <table className="w-full border-collapse border border-black text-[8.5pt] sm:text-[9pt]">
+                {/* Wrapper for Items + Signatures to handle conditional page breaking */}
+                <div className="break-inside-avoid print:break-inside-avoid">
+                  {/* List of Items Grid Table */}
+                  <div className="text-[7pt] font-black italic mb-0.5">
+                    List of Items , Tools and Tackles carried along with the above persons if any , for more items attach separate list
+                  </div>
+                  <table className="w-full border-collapse border border-black text-[7.5pt] mb-1.5">
                     <thead>
-                      <tr className="border-b border-black">
-                        <th className="w-[20%] py-1 px-2 border-r border-black font-bold text-left">Name</th>
-                        <th className="w-[55%] py-1 px-2 border-r border-black font-bold text-left">Name and Designation</th>
-                        <th className="py-1 px-2 font-bold text-left">Signature</th>
+                      <tr className="border-b border-black font-bold">
+                        <th className="w-[4%] border-r border-black p-0.5">Sl<br/>No</th>
+                        <th className="border-r border-black p-0.5 text-left pl-1.5">Name, Nomenclature of item</th>
+                        <th className="w-[8%] border-r border-black p-0.5">Unit</th>
+                        <th className="w-[6%] border-r border-black p-0.5">Qty</th>
+                        {itemsList.length > 4 && (
+                          <>
+                            <th className="w-[4%] border-r border-black p-0.5">Sl<br/>No</th>
+                            <th className="w-[36%] border-r border-black p-0.5 text-left pl-1.5">Name, Nomenclature of item</th>
+                            <th className="w-[8%] border-r border-black p-0.5">Unit</th>
+                            <th className="w-[6%] p-0.5">Qty</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-black">
-                        <td className="py-1 px-2 border-r border-black font-bold align-top">Checked By</td>
-                        <td className="p-0 border-r border-black align-top">
-                          <div className="flex h-full min-h-[46px]">
-                            <div className="w-[70%] py-1 px-2 border-r border-black flex flex-col justify-center">
-                              <div className="font-bold">Mr Mayur Kant Tripathi</div>
-                              <div className="text-slate-800 text-[8pt]">Dy.G.M (Electrical)/C&IT)</div>
-                            </div>
-                            <div className="w-[30%] py-1 px-2 flex items-center justify-center text-center text-slate-300">
-                              —
-                            </div>
+                      {itemsList.length > 4 ? (
+                        [...Array(Math.ceil(itemsList.length / 2))].map((_, i) => {
+                          const item1 = itemsList[i * 2];
+                          const item2 = itemsList[i * 2 + 1];
+                          return (
+                            <tr key={i} className="border-b border-black last:border-b-0 h-5">
+                              <td className="border-r border-black p-0.5 text-center font-bold">{i * 2 + 1}</td>
+                              <td className="border-r border-black p-0.5 pl-1.5 font-bold overflow-hidden whitespace-nowrap text-ellipsis max-w-0">{item1?.itemName || ""}</td>
+                              <td className="border-r border-black p-0.5 text-center uppercase">{item1?.unit || ""}</td>
+                              <td className="border-r border-black p-0.5 text-center font-bold">{item1?.quantity || ""}</td>
+                              <td className="border-r border-black p-0.5 text-center font-bold">{i * 2 + 2}</td>
+                              <td className="border-r border-black p-0.5 pl-1.5 font-bold overflow-hidden whitespace-nowrap text-ellipsis max-w-0">{item2?.itemName || ""}</td>
+                              <td className="border-r border-black p-0.5 text-center uppercase">{item2?.unit || ""}</td>
+                              <td className="p-0.5 text-center font-bold">{item2?.quantity || ""}</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        itemsList.map((item, i) => (
+                          <tr key={i} className="border-b border-black last:border-b-0 h-5">
+                            <td className="border-r border-black p-0.5 text-center font-bold">{i + 1}</td>
+                            <td className="border-r border-black p-0.5 pl-1.5 font-bold">{item.itemName}</td>
+                            <td className="border-r border-black p-0.5 text-center uppercase">{item.unit || ""}</td>
+                            <td className="p-0.5 text-center font-bold">{item.quantity || ""}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+
+                  {/* Gate Pass Authorization Table */}
+                  <table className="w-full border-collapse border border-black text-[7.5pt] mb-2">
+                    <tbody>
+                      <tr className="border-b border-black h-4">
+                        <td className="w-[28%] border-r border-black px-2 font-bold py-0.5">Gate pass</td>
+                        <td className="w-[24%] border-r border-black px-2 font-bold py-0.5">Checked By</td>
+                        <td className="w-[24%] border-r border-black px-2 font-bold py-0.5">Recommended By</td>
+                        <td className="w-[24%] px-2 font-bold py-0.5">Issued By</td>
+                      </tr>
+                      <tr className="border-b border-black h-9">
+                        <td className="border-r border-black px-2 font-bold align-top pt-1">Signature</td>
+                        <td className="border-r border-black relative">
+                          <div className="absolute inset-0 flex items-center justify-center text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-5deg] opacity-70">
+                            {pass.citApprovedDate ? `Verified: ${pass.citApprovedDate}` : ''}
                           </div>
                         </td>
-                        <td className="py-1 px-2 align-bottom h-11">
-                          <div className="text-emerald-700 font-mono text-[7.5pt] italic font-semibold">
-                            {pass.citApprovedDate ? `✓ Verified on ${pass.citApprovedDate}` : ''}
+                        <td className="border-r border-black relative">
+                          <div className="absolute inset-0 flex items-center justify-center text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-5deg] opacity-70">
+                            {pass.recommendedDate ? `Rec: ${pass.recommendedDate}` : ''}
+                          </div>
+                        </td>
+                        <td className="relative">
+                          <div className="absolute inset-0 flex items-center justify-center text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-5deg] opacity-70">
+                            {pass.cisfSignatureDate ? `Signed: ${pass.cisfSignatureDate}` : ''}
                           </div>
                         </td>
                       </tr>
                       <tr className="border-b border-black">
-                        <td className="py-1 px-2 border-r border-black font-bold align-top">Recommended by</td>
-                        <td className="p-0 border-r border-black align-top">
-                          <div className="flex h-full min-h-[46px]">
-                            <div className="w-[70%] py-1 px-2 border-r border-black flex flex-col justify-center">
-                              <div className="font-bold">Mr.A.V.L.Ramakrishna</div>
-                              <div className="text-slate-800 text-[8pt]">Dy.G.M (C&IT)</div>
-                            </div>
-                            <div className="w-[30%] py-1 px-2 font-bold flex items-center justify-center text-center text-[8pt] sm:text-[8.5pt] leading-tight">
-                              Engineer-in-Charge
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-1 px-2 align-bottom h-11">
-                          <div className="text-emerald-700 font-mono text-[7.5pt] italic font-semibold">
-                            {pass.recommendedDate ? `✓ Recommended on ${pass.recommendedDate}` : ''}
-                          </div>
-                        </td>
+                        <td className="border-r border-black px-2 font-bold py-0.5">Name</td>
+                        <td className="border-r border-black px-2 font-black py-0.5 uppercase leading-tight">Mr. Mayur Kant Tripathi</td>
+                        <td className="border-r border-black px-2 font-black py-0.5 uppercase leading-tight">A.V.L Ramakrishna</td>
+                        <td className="px-2 font-black py-0.5 uppercase leading-tight">Sreekanth Babu B</td>
                       </tr>
-                      <tr>
-                        <td className="py-1 px-2 border-r border-black font-bold align-top">Signed By</td>
-                        <td className="p-0 border-r border-black align-top">
-                          <div className="flex h-full min-h-[46px]">
-                            <div className="w-[70%] py-1 px-2 border-r border-black flex flex-col justify-center">
-                              <div className="font-bold">Mr Sreekanth Babu B</div>
-                              <div className="text-slate-800 text-[8pt]">Dy.G.M (C&IT)</div>
-                            </div>
-                            <div className="w-[30%] py-1 px-2 font-bold flex items-center justify-center text-center text-[8.5pt]">
-                              H.O.D
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-1 px-2 align-bottom h-11">
-                          <div className="text-emerald-700 font-mono text-[7.5pt] italic font-semibold">
-                            {pass.cisfSignatureDate ? `✓ Signed on ${pass.cisfSignatureDate}` : ''}
-                          </div>
-                        </td>
+                      <tr className="border-b border-black">
+                        <td className="border-r border-black px-2 font-bold py-0.5">Designation</td>
+                        <td className="border-r border-black px-2 font-bold py-0.5 uppercase leading-tight">DGM(Electrical) /(C&IT)</td>
+                        <td className="border-r border-black px-2 font-bold py-0.5 uppercase leading-tight">DGM(C&IT)</td>
+                        <td className="px-2 font-bold py-0.5 uppercase leading-tight">DGM(C&IT)/HOD</td>
+                      </tr>
+                      <tr className="border-b border-black">
+                        <td className="border-r border-black px-2 font-bold py-0.5 uppercase tracking-tighter leading-none">Contact No/Mobile</td>
+                        <td className="border-r border-black px-2 font-bold py-0.5">8148594570</td>
+                        <td className="border-r border-black px-2 font-bold py-0.5">9754233182</td>
+                        <td className="px-2 font-bold py-0.5">9032639870</td>
+                      </tr>
+                      <tr className="border-b-0">
+                        <td className="border-r border-black px-2 font-bold py-0.5">Department</td>
+                        <td className="border-r border-black px-2 font-bold py-0.5 uppercase">C&IT</td>
+                        <td className="border-r border-black px-2 font-bold py-0.5 uppercase">C&IT</td>
+                        <td className="px-2 font-bold py-0.5 uppercase">C&IT</td>
                       </tr>
                     </tbody>
                   </table>
-                </div>
 
-                {/* Triplicate Copy Footer with Dedicated Space for CISF Stamping & Signing */}
-                <div className="border border-black mt-2 grid grid-cols-3 divide-x divide-black text-center text-[8.5pt] sm:text-[9pt]">
-                  {/* OFFICE COPY */}
-                  <div className="p-1.5 flex flex-col justify-between min-h-[70px]">
-                    <div className="font-bold uppercase tracking-wider text-[9pt] sm:text-[9.5pt]">
-                      OFFICE COPY
+                  {/* Triplicate Copy Footer Partitioned (Signature area is ABOVE these boxes) */}
+                  <div className="border border-black grid grid-cols-3 divide-x divide-black text-center text-[7.5pt] font-black uppercase tracking-wider min-h-[40px] mt-10">
+                    <div className="flex items-center justify-center p-1">
+                      (1) OFFICE COPY
                     </div>
-                    <div className="text-[7pt] text-slate-500 italic mt-auto">
-                      Department Record
+                    <div className="flex items-center justify-center p-1">
+                      (2) CUSTOMER COPY
                     </div>
-                  </div>
-
-                  {/* CUSTOMER COPY */}
-                  <div className="p-1.5 flex flex-col justify-between min-h-[70px]">
-                    <div className="font-bold uppercase tracking-wider text-[9pt] sm:text-[9.5pt]">
-                      CUSTOMER COPY
-                    </div>
-                    <div className="text-[7pt] text-slate-500 italic mt-auto">
-                      Transporter / Vendor Copy
-                    </div>
-                  </div>
-
-                  {/* CISF COPY with dedicated space for Stamping & Signing */}
-                  <div className="p-1.5 flex flex-col justify-between min-h-[70px] bg-slate-50/60">
-                    <div className="font-bold uppercase tracking-wider text-[9pt] sm:text-[9.5pt]">
-                      CISF COPY
-                    </div>
-                    <div className="border-t border-dashed border-slate-500 pt-0.5 mt-auto flex flex-col items-center">
-                      <div className="text-[7.5pt] font-bold text-slate-800 uppercase tracking-tight">
-                        CISF Gate Stamping & Signature
-                      </div>
-                      <div className="text-[6.5pt] text-slate-500 italic">
-                        (Date / In-Out Seal & Verification)
-                      </div>
+                    <div className="flex items-center justify-center p-1 bg-slate-50/20">
+                      (3) CISF COPY
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* -------------------------------------------------------------
-                  PAGE 2: INSTRUCTIONS TO THE PASS HOLDERS
+                  PAGE 2: INSTRUCTIONS TO THE PASS HOLDER(S)
                   ------------------------------------------------------------- */}
               {includeInstructions && (
-                <div className="page-break-before bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt] mt-6 print:mt-0">
-                  <div className="text-center font-bold mb-6">
-                    <div className="text-sm sm:text-base tracking-wide font-black uppercase underline decoration-1 underline-offset-4">
-                      INSTRUCTIONS TO THE PASS HOLDERS:
+                <div className="page-break-before bg-white p-8 sm:p-12 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif text-[10.5pt] mt-6 print:mt-0 leading-snug">
+                  <div className="text-left font-black mb-6 uppercase underline tracking-tight">
+                    INSTRUCTIONS TO THE PASS HOLDER(S)
+                  </div>
+
+                  <div className="space-y-4 text-justify">
+                    <div className="flex gap-2">
+                      <span className="shrink-0 font-bold">(01)</span>
+                      <span>Pass holder(s) shall carry a valid photo identity card issued by the concerned authority / employer and produce it for verification whenever required.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="shrink-0 font-bold">(02)</span>
+                      <span>Pass holder(s) shall proceed only to the location(s) and for the purpose specified in the Gate Pass.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="shrink-0 font-bold">(03)</span>
+                      <span>Vehicles entering the premises shall be roadworthy. Drivers / operators shall possess valid driving licences and other applicable documents. Relevant documents shall be produced for verification at the security / CISF check post whenever required.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="shrink-0 font-bold">(04)</span>
+                      <span>Photography, videography or recording inside restricted / prohibited areas is strictly prohibited unless specifically authorized.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="shrink-0 font-bold">(05)</span>
+                      <span>Use of mobile phones while driving or operating vehicles / equipment is strictly prohibited.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="shrink-0 font-bold">(06)</span>
+                      <span>The Gate Pass is non-transferable and shall be used only during its specified validity period. The pass shall be surrendered / returned to the concerned authority on expiry or completion of the permitted work.</span>
                     </div>
                   </div>
 
-                  <ol className="space-y-4 text-xs sm:text-[10.5pt] text-justify leading-relaxed list-none p-0">
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">1.</span>
-                      <span>Pass holder(s) must carry their own photo identity Cards issued by the concerned authorities like Election Commission, Employer (in the case of employees), and Head of Institutions/firms etc.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">2.</span>
-                      <span>Pass holder(s) should not proceed for any location, installations etc. other than specified in the Gate Pass.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">3.</span>
-                      <span>It is the responsibility pass holders to observe and abide all statutory / safety rules/ guide lines etc. as applicable in the mine/OSCL Plant/Pellet Plant to avoid any untoward incident. Corporation will not be responsible for any injury, loss, damage etc. caused to the pass holder(s) due to negligence or oversight on their part and they are liable to pay to Corporation if any loss or damage caused to the Corporation.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">4.</span>
-                      <span>The employees engaged by contractors for carrying out contract works in mine area should undergo M V Training and IME (Initial Medical Examination)/PME (Periodical Medical Examination) invariably as per statutes and they should wear all safety appliances as applicable.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">5.</span>
-                      <span>The vehicle(s) entering inside the check post should be road-worthy and the Driver(s) / operator(s) must have adequate experience and valid Driving Licence issued by the concerned Authorities. (The original documents like RC Book, Licence etc. are required to be produced for checking at check post.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">6.</span>
-                      <span>No person(s) are not allowed to travel on the dump body /uncovered rear portion /carrier of vehicles like Tippers/Trucks/ Tractors /Pick up vans etc. inside the check post.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">7.</span>
-                      <span>Two wheeler are restricted to valley store/Time office (Loading Plant) and it is totally prohibited beyond old VTC / Valley store area and Time office (Loading Plant).</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">8.</span>
-                      <span>Taking video graph / photograph etc. is strictly prohibited inside the check post.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-bold w-5 shrink-0">9.</span>
-                      <span>Use of mobile phone is prohibited while operating vehicles or equipment.</span>
-                    </li>
-                  </ol>
-
                   <div className="mt-12 space-y-6">
-                    <div className="text-center font-bold underline tracking-wide text-xs sm:text-[11pt] uppercase">
+                    <div className="font-black uppercase tracking-tight">
                       DECLARATION BY PASS HOLDER
                     </div>
-                    <div className="text-xs sm:text-[10.5pt]">
-                      All the above instructions are noted for strict compliance.
+                    <div className="text-[10pt]">
+                      I / We have read and understood the above instructions and undertake to comply with them strictly.
                     </div>
 
-                    <div className="pt-16 flex flex-col items-end space-y-3">
-                      <div>Signature: _________________</div>
-                      <div className="font-semibold text-slate-800 pr-4">Name of Pass holder.</div>
+                    <div className="pt-8 space-y-6 flex flex-col items-end">
+                      <div className="w-full flex justify-end items-center gap-2">
+                        <span className="font-bold">Signature:</span>
+                        <div className="border-b border-black w-64 h-5"></div>
+                      </div>
+                      <div className="w-full flex justify-end items-center gap-2">
+                        <span className="font-bold">Name of Pass Holder:</span>
+                        <div className="border-b border-black w-64 h-5"></div>
+                      </div>
+                      <div className="w-full flex justify-end items-center gap-2">
+                        <span className="font-bold">Date:</span>
+                        <div className="border-b border-black w-64 h-5"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
