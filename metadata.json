@@ -1,0 +1,6 @@
+{
+  "name": "Entry Pass Follow-Up System | Amnex - NMDC Ltd",
+  "description": "Entry pass tracking and follow-up management for Amnex Infotechnologies at NMDC Ltd facilities, monitored by CISF security.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
