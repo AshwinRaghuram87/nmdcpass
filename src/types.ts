@@ -66,7 +66,10 @@ export interface MaterialItem {
   quantity: number;
   unit: string;
   boqItemNumber?: string; // e.g. "BOQ-ITEM-4.1", "BOQ-ELEC-11"
+  boqNumber?: string; // Overall BOQ Reference Number
   isBoq: boolean; // true = BOQ Item, false = Non-BOQ Item
+  oem?: string; // Original Equipment Manufacturer
+  oemModel?: string; // Model and Make of the item
   billNumber?: string; // Invoice / Bill / Delivery Challan reference
   billDocument?: ApprovedDocument; // Uploaded bill document for item
   serialNumber?: string;

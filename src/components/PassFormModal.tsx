@@ -333,6 +333,9 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
         specification: '',
         isBoq: true,
         boqItemNumber: `BOQ-${materialItems.length + 1}.1`,
+        boqNumber: '',
+        oem: '',
+        oemModel: '',
         billNumber: billNumber || challanInvoiceNumber || '',
         quantity: 1,
         unit: 'Nos',
@@ -1265,6 +1268,38 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                             className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-mono"
                           />
                         </div>
+                      </div>
+
+                      {/* BOQ & OEM Details */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                        <input
+                          type="text"
+                          placeholder="BOQ Number"
+                          value={itm.boqNumber || ''}
+                          onChange={(e) => handleUpdateMaterialItem(idx, 'boqNumber', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs"
+                        />
+                        <input
+                          type="text"
+                          placeholder="BOQ Item #"
+                          value={itm.boqItemNumber || ''}
+                          onChange={(e) => handleUpdateMaterialItem(idx, 'boqItemNumber', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-mono"
+                        />
+                        <input
+                          type="text"
+                          placeholder="OEM (Manufacturer)"
+                          value={itm.oem || ''}
+                          onChange={(e) => handleUpdateMaterialItem(idx, 'oem', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs"
+                        />
+                        <input
+                          type="text"
+                          placeholder="OEM Model / Make"
+                          value={itm.oemModel || ''}
+                          onChange={(e) => handleUpdateMaterialItem(idx, 'oemModel', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs"
+                        />
                       </div>
 
                       {/* Bill details and Remarks row */}

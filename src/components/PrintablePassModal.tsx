@@ -391,6 +391,25 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
 
         {/* Modal Scroll Body */}
         <div className="p-4 sm:p-8 bg-slate-100 overflow-y-auto max-h-[85vh] print:p-0 print:m-0 print:max-h-none print:overflow-visible print:bg-white">
+          <style>{`
+            @media print {
+              @page {
+                size: A4;
+                margin: 10mm;
+              }
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
+              .print-page-container {
+                page-break-after: always;
+                break-after: page;
+                height: 297mm;
+                box-sizing: border-box;
+                overflow: hidden;
+              }
+            }
+          `}</style>
           
           {printLayout === 'standard' ? (
             /* =========================================================================
@@ -400,19 +419,43 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
               
               {/* ------------------------- PAGE 1 (GATE PASS) ------------------------- */}
               {showAtt1 && (
-                <div className="page-break-after bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt]">
+                <div className="page-break-after print-page-container bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt]">
                   
-                  {/* Document Header - No NMDC LIMITED or Attachment No on top */}
-                  <div className="text-center font-bold space-y-1 mb-4 pt-1">
-                    <div className="text-base sm:text-lg tracking-wider uppercase font-black font-serif">
-                      DONIMALAI IRON ORE MINE
+                  {/* Exact PDF Header with Logo */}
+                  <div className="border border-black flex mb-2">
+                    <div className="w-[15%] border-r border-black p-1 flex items-center justify-center">
+                      <img 
+                        src="/nmdc_logo.jpg" 
+                        alt="NMDC Logo" 
+                        className="max-h-16 w-auto object-contain"
+                      />
                     </div>
-                    <div className="text-sm sm:text-base tracking-wide font-black uppercase underline decoration-1 underline-offset-4">
-                      GATEPASS
+                    <div className="w-[65%] border-r border-black flex flex-col text-center font-bold">
+                      <div className="border-b border-black py-0.5 text-[11pt] uppercase tracking-wider font-black">
+                        DONIMALAI COMPLEX
+                      </div>
+                      <div className="border-b border-black py-0.5 text-[7.5pt] px-1 uppercase leading-tight font-bold">
+                        INTEGRATED MANAGEMENT SYSTEM<br/>
+                        <span className="text-[6.5pt] font-bold font-sans">(ISO 9001:2015, ISO 14001:2015, OHSAS 45001:2018, SA 8000:2014)</span>
+                      </div>
+                      <div className="border-b border-black py-0.5 text-[9pt] uppercase tracking-tight font-black">
+                        STANDARD OPERATING PROCEDURE (SOP)
+                      </div>
+                      <div className="py-0.5 text-[8.5pt] font-bold leading-tight flex flex-col justify-center flex-1">
+                        <div>Gate Pass Entry at CISF Check Post</div>
+                        <div className="font-black uppercase">Employee Gate Pass</div>
+                      </div>
                     </div>
-                    <div className="text-xs sm:text-sm font-semibold italic text-slate-800 font-serif">
-                      (To be issued by the concerned Head of department)
+                    <div className="w-[20%] flex flex-col text-[7.5pt] font-bold p-1 justify-center border-l-0">
+                      <div className="border-b border-black pb-0.5 mb-0.5">Revision No. 00</div>
+                      <div className="border-b border-black pb-0.5 mb-0.5">Issue No: 01</div>
+                      <div>Date: 16.09.2026</div>
                     </div>
+                  </div>
+
+                  <div className="flex justify-between text-[8pt] font-bold italic mb-1">
+                    <div>(To be issued by the concerned Head of Department)</div>
+                    <div className="not-italic uppercase">Annexure-I</div>
                   </div>
 
                   {/* Top Details Table with Separate Column for Number */}
@@ -1022,7 +1065,7 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
               {/* -------------------------------------------------------------
                   PAGE 1: MATERIAL ENTRY PASS & AUTHORIZATION
                   ------------------------------------------------------------- */}
-              <div className="bg-white p-6 sm:p-8 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-tight text-[9.5pt]">
+              <div className="print-page-container bg-white p-6 sm:p-8 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-tight text-[9.5pt]">
                 {/* Exact PDF Header */}
                 <div className="border border-black flex mb-2">
                   <div className="w-[15%] border-r border-black p-1 flex items-center justify-center">
@@ -1076,8 +1119,10 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                         Gatepass No & Date
                       </td>
                       <td className="py-0.5 px-2">
-                        <span className="font-bold">{gatePassNo}</span>
-                        <span className="ml-24 font-semibold">{gatePassDate} No</span>
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-bold">{gatePassNo}</span>
+                          <span className="font-semibold pr-8">{gatePassDate} No</span>
+                        </div>
                       </td>
                     </tr>
                     <tr className="border-b border-black">
@@ -1283,20 +1328,20 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                         <td className="w-[24%] border-r border-black px-2 font-bold py-0.5">Recommended By</td>
                         <td className="w-[24%] px-2 font-bold py-0.5">Issued By</td>
                       </tr>
-                      <tr className="border-b border-black h-9">
+                      <tr className="border-b border-black h-12">
                         <td className="border-r border-black px-2 font-bold align-top pt-1">Signature</td>
-                        <td className="border-r border-black relative">
-                          <div className="absolute inset-0 flex items-center justify-center text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-5deg] opacity-70">
+                        <td className="border-r border-black relative text-center">
+                          <div className="text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-3deg] opacity-80 leading-none">
                             {pass.citApprovedDate ? `Verified: ${pass.citApprovedDate}` : ''}
                           </div>
                         </td>
-                        <td className="border-r border-black relative">
-                          <div className="absolute inset-0 flex items-center justify-center text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-5deg] opacity-70">
+                        <td className="border-r border-black relative text-center">
+                          <div className="text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-3deg] opacity-80 leading-none">
                             {pass.recommendedDate ? `Rec: ${pass.recommendedDate}` : ''}
                           </div>
                         </td>
-                        <td className="relative">
-                          <div className="absolute inset-0 flex items-center justify-center text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-5deg] opacity-70">
+                        <td className="relative text-center">
+                          <div className="text-emerald-700 font-mono text-[7pt] italic font-semibold rotate-[-3deg] opacity-80 leading-none">
                             {pass.cisfSignatureDate ? `Signed: ${pass.cisfSignatureDate}` : ''}
                           </div>
                         </td>
@@ -1329,17 +1374,21 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                   </table>
 
                   {/* Triplicate Copy Footer Partitioned (Signature area is ABOVE these boxes) */}
-                  <div className="border border-black grid grid-cols-3 divide-x divide-black text-center text-[7.5pt] font-black uppercase tracking-wider min-h-[40px] mt-10">
-                    <div className="flex items-center justify-center p-1">
-                      (1) OFFICE COPY
-                    </div>
-                    <div className="flex items-center justify-center p-1">
-                      (2) CUSTOMER COPY
-                    </div>
-                    <div className="flex items-center justify-center p-1 bg-slate-50/20">
-                      (3) CISF COPY
-                    </div>
-                  </div>
+                  <table className="w-full border-collapse border border-black text-center text-[5pt] font-black uppercase tracking-wider mt-2">
+                    <tbody>
+                      <tr>
+                        <td className="w-1/3 border-r border-black p-0 h-4 align-middle">
+                          (1) OFFICE COPY
+                        </td>
+                        <td className="w-1/3 border-r border-black p-0 h-4 align-middle">
+                          (2) CUSTOMER COPY
+                        </td>
+                        <td className="w-1/3 p-0 h-4 align-middle">
+                          (3) CISF COPY
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -1347,7 +1396,7 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                   PAGE 2: INSTRUCTIONS TO THE PASS HOLDER(S)
                   ------------------------------------------------------------- */}
               {includeInstructions && (
-                <div className="page-break-before bg-white p-8 sm:p-12 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif text-[10.5pt] mt-6 print:mt-0 leading-snug">
+                <div className="page-break-before print-page-container bg-white p-8 sm:p-12 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif text-[10.5pt] mt-6 print:mt-0 leading-snug">
                   <div className="text-left font-black mb-6 uppercase underline tracking-tight">
                     INSTRUCTIONS TO THE PASS HOLDER(S)
                   </div>
@@ -1404,12 +1453,65 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                   </div>
                 </div>
               )}
+
+              {/* -------------------------------------------------------------
+                  PAGE 3: REQUEST FOR PASS FOR BOQ ITEMS (Non-Returnable Only)
+                  ------------------------------------------------------------- */}
+              {pass.materialCategory === 'Non-Returnable' && (
+                <div className="page-break-before print-page-container bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif text-[10pt] mt-6 print:mt-0 min-h-[1050px]">
+                  <div className="text-center mb-8">
+                    <h2 className="text-[15pt] font-black uppercase underline underline-offset-4 tracking-tight">Request for Pass for BOQ Items</h2>
+                    <h3 className="text-[13pt] font-bold mt-1">Amnex Infotechnologies</h3>
+                  </div>
+
+                  <table className="w-full border-collapse border border-black text-[9pt]">
+                    <thead>
+                      <tr className="bg-slate-50 print:bg-transparent font-bold">
+                        <th className="border border-black p-2 w-[8%] text-center">SL No</th>
+                        <th className="border border-black p-2 w-[14%] text-left">BOQ Number</th>
+                        <th className="border border-black p-2 w-[14%] text-left">BOQ Item</th>
+                        <th className="border border-black p-2 text-left">Name of the Item</th>
+                        <th className="border border-black p-2 w-[12%] text-left">OEM</th>
+                        <th className="border border-black p-2 w-[16%] text-left">OEM Model and Make</th>
+                        <th className="border border-black p-2 w-[8%] text-center">Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itemsList.map((item, idx) => (
+                        <tr key={idx} className="h-10">
+                          <td className="border border-black p-2 text-center font-bold">{idx + 1}</td>
+                          <td className="border border-black p-2 uppercase font-mono text-[8pt]">{item.boqNumber || "---"}</td>
+                          <td className="border border-black p-2 uppercase font-mono text-[8pt]">{item.boqItemNumber || "---"}</td>
+                          <td className="border border-black p-2 font-bold uppercase">{item.itemName}</td>
+                          <td className="border border-black p-2 uppercase">{item.oem || "---"}</td>
+                          <td className="border border-black p-2 uppercase">{item.oemModel || "---"}</td>
+                          <td className="border border-black p-2 text-center font-bold">{item.quantity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="mt-20 flex justify-start px-10">
+                    <div className="text-center">
+                      <div className="h-16 w-52 border-b border-black mb-2 flex items-end justify-center">
+                        <span className="text-[7pt] text-slate-400 italic mb-1">Amnex Authorized Signatory</span>
+                      </div>
+                      <div className="font-black text-[11pt] uppercase">Requested By</div>
+                      <div className="text-[9pt] font-bold">Amnex Infotechnologies</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-20 text-[9pt] italic text-slate-600">
+                    * This is a supplemental document for Non-Returnable material gate passes containing BOQ specific details for project audit and inventory tracking.
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* =========================================================================
                GATE ID BADGE LAYOUT (Compact Security Card Format)
                ========================================================================= */
-            <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-300 shadow-sm max-w-xl mx-auto space-y-4 text-slate-900">
+            <div className="print-page-container bg-white p-6 sm:p-8 rounded-xl border border-slate-300 shadow-sm max-w-xl mx-auto space-y-4 text-slate-900">
               <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
                 <div>
                   <div className="text-[10px] uppercase font-bold text-slate-500">NMDC , Donimalai</div>
