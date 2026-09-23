@@ -11,13 +11,22 @@ import {
   Shield, 
   Lock, 
   ChevronDown,
-  FileText
+  FileText,
+  Cloud,
+  CloudOff,
+  RefreshCw
 } from 'lucide-react';
 import { downloadSampleTemplate } from '../utils/excelHelper';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
   currentProfile: UserProfile;
+  cloudStatus: {
+    connected: boolean;
+    source: string;
+    loading: boolean;
+  };
+  onRefreshCloud: () => void;
   onOpenNewPassModal: () => void;
   onOpenExcelModal: () => void;
   onExportExcel: () => void;
@@ -29,6 +38,8 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   currentProfile,
+  cloudStatus,
+  onRefreshCloud,
   onOpenNewPassModal,
   onOpenExcelModal,
   onExportExcel,
@@ -56,6 +67,36 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Cloud Database Sync Indicator */}
+            <button
+              onClick={onRefreshCloud}
+              title={
+                cloudStatus.connected 
+                  ? `Connected to Neon Postgres (${cloudStatus.source}). Click to re-sync.` 
+                  : 'Running in Local Cache mode. Click to check Neon Postgres connection.'
+              }
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer border ${
+                cloudStatus.connected
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800 hover:bg-emerald-900/90'
+                  : 'bg-amber-950/80 text-amber-300 border-amber-800/70 hover:bg-amber-900/90'
+              }`}
+            >
+              {cloudStatus.loading ? (
+                <RefreshCw className="w-3 h-3 animate-spin text-slate-300" />
+              ) : cloudStatus.connected ? (
+                <Cloud className="w-3 h-3 text-emerald-400" />
+              ) : (
+                <CloudOff className="w-3 h-3 text-amber-400" />
+              )}
+              <span>
+                {cloudStatus.loading 
+                  ? 'Syncing...' 
+                  : cloudStatus.connected 
+                    ? 'Cloud DB Active (Neon)' 
+                    : 'Local Cache'}
+              </span>
+            </button>
+
             {/* User Profile / Switcher Badge */}
             <button
               id="user-badge"

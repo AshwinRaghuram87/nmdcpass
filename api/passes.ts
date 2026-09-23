@@ -15,6 +15,7 @@ async function initPostgresTable() {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS Headers for API calls
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -24,59 +25,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const isPostgresConfigured = !!(
+  // Detect which database is available
+  const hasPostgres = !!(
     process.env.POSTGRES_URL || 
     process.env.POSTGRES_PRISMA_URL || 
     process.env.DATABASE_URL || 
     process.env.DATABASE_URL_UNPOOLED
   );
-  const isKvConfigured = !!(
+
+  const hasKv = !!(
     (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ||
     process.env.KV_URL
   );
 
   try {
     // ----------------------------------------------------
-    // GET: Retrieve Passes from Postgres or KV or Fallback
+    // GET: Retrieve Passes from Postgres or KV
     // ----------------------------------------------------
     if (req.method === 'GET') {
-      // 1. Check Postgres (Neon)
-      if (isPostgresConfigured) {
+      // 1. Try Postgres (Neon)
+      if (hasPostgres) {
         try {
           await initPostgresTable();
           const { rows } = await sql`
             SELECT data FROM nmdc_passes_store WHERE id = 'latest_passes' LIMIT 1;
           `;
-          const passesData = rows.length > 0 ? rows[0].data : [];
+          const passesData = rows.length > 0 && Array.isArray(rows[0].data) ? rows[0].data : [];
           return res.status(200).json({
             status: 'success',
             source: 'vercel_postgres',
+            count: passesData.length,
             passes: passesData
           });
         } catch (dbErr: any) {
-          console.error('Postgres read error:', dbErr);
+          console.error('Postgres read query failed:', dbErr);
+          // If query failed, continue to KV check or report error
         }
       }
 
-      // 2. Check KV (Upstash)
-      if (isKvConfigured) {
+      // 2. Try KV (Upstash)
+      if (hasKv) {
         try {
-          const stored = await kv.get(KV_PASSES_KEY);
+          const stored = await kv.get<any[]>(KV_PASSES_KEY);
           return res.status(200).json({
             status: 'success',
             source: 'vercel_kv',
+            count: (stored || []).length,
             passes: stored || []
           });
         } catch (kvErr: any) {
-          console.error('KV read error:', kvErr);
+          console.error('KV read query failed:', kvErr);
         }
       }
 
-      // 3. Fallback to client localStorage
+      // 3. Fallback when neither database is reachable or environment variables aren't injected
       return res.status(200).json({
         status: 'fallback',
         source: 'local_fallback',
-        message: 'No Vercel Storage connected yet. Operating in local storage mode.',
+        message: 'No cloud database active on Vercel yet. Env variables might need redeploy.',
         passes: null
       });
     }
@@ -88,14 +94,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { passes } = req.body || {};
 
       if (!Array.isArray(passes)) {
-        return res.status(400).json({ error: 'Invalid passes payload: expected array' });
+        return res.status(400).json({
+          status: 'error',
+          error: 'Invalid passes payload: expected array'
+        });
       }
 
       // 1. Try Postgres
-      if (isPostgresConfigured) {
+      if (hasPostgres) {
         try {
           await initPostgresTable();
           const jsonString = JSON.stringify(passes);
+          // Insert or update as JSONB
           await sql`
             INSERT INTO nmdc_passes_store (id, data, updated_at)
             VALUES ('latest_passes', ${jsonString}::jsonb, CURRENT_TIMESTAMP)
@@ -108,12 +118,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             count: passes.length
           });
         } catch (dbErr: any) {
-          console.error('Postgres write error:', dbErr);
+          console.error('Postgres write query failed:', dbErr);
+          return res.status(500).json({
+            status: 'error',
+            source: 'vercel_postgres',
+            message: dbErr?.message || 'Database write error'
+          });
         }
       }
 
       // 2. Try KV
-      if (isKvConfigured) {
+      if (hasKv) {
         try {
           await kv.set(KV_PASSES_KEY, passes);
           return res.status(200).json({
@@ -122,7 +137,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             count: passes.length
           });
         } catch (kvErr: any) {
-          console.error('KV write error:', kvErr);
+          console.error('KV write query failed:', kvErr);
+          return res.status(500).json({
+            status: 'error',
+            source: 'vercel_kv',
+            message: kvErr?.message || 'KV write error'
+          });
         }
       }
 
@@ -130,14 +150,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         status: 'fallback',
         source: 'local_fallback',
-        message: 'No cloud database connected in Vercel. Storing locally in browser.',
+        message: 'No database configured. Storing in browser only.',
         count: passes.length
       });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
-    console.error('API /api/passes error:', error);
+    console.error('API /api/passes uncaught error:', error);
     return res.status(500).json({
       status: 'error',
       message: error?.message || 'Internal server error',

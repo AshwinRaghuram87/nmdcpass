@@ -24,6 +24,61 @@ export default function App() {
   const [currentProfile, setCurrentProfile] = useState<UserProfile>(() => getActiveUserProfile());
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
+  // Cloud Database state (Neon Postgres / Vercel KV)
+  const [cloudStatus, setCloudStatus] = useState<{
+    connected: boolean;
+    source: string;
+    loading: boolean;
+    hasLoadedInitially: boolean;
+  }>({
+    connected: false,
+    source: 'checking...',
+    loading: true,
+    hasLoadedInitially: false
+  });
+
+  // Pull latest passes from Neon Postgres on load
+  const loadCloudPasses = async () => {
+    setCloudStatus(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await fetchPassesFromCloud();
+      if (res && res.connected) {
+        setCloudStatus({
+          connected: true,
+          source: res.source,
+          loading: false,
+          hasLoadedInitially: true
+        });
+        if (Array.isArray(res.passes) && res.passes.length > 0) {
+          setPasses(res.passes);
+        }
+      } else {
+        setCloudStatus({
+          connected: false,
+          source: res.source || 'local_fallback',
+          loading: false,
+          hasLoadedInitially: true
+        });
+      }
+    } catch (e) {
+      setCloudStatus(prev => ({ ...prev, connected: false, loading: false, hasLoadedInitially: true }));
+    }
+  };
+
+  useEffect(() => {
+    loadCloudPasses();
+  }, []);
+
+  // Sync to local storage & Cloud DB on changes only after initial load has finished
+  useEffect(() => {
+    if (!cloudStatus.hasLoadedInitially) return;
+    saveStoredPasses(passes).then((success) => {
+      if (success && !cloudStatus.connected) {
+        setCloudStatus(prev => ({ ...prev, connected: true }));
+      }
+    });
+  }, [passes, cloudStatus.hasLoadedInitially]);
+
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [materialSearchQuery, setMaterialSearchQuery] = useState('');
@@ -47,20 +102,6 @@ export default function App() {
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
-
-  // Initial cloud fetch from Vercel KV if available
-  useEffect(() => {
-    fetchPassesFromCloud().then((res) => {
-      if (res && res.passes) {
-        setPasses(res.passes);
-      }
-    });
-  }, []);
-
-  // Sync to local storage & Vercel KV on changes
-  useEffect(() => {
-    saveStoredPasses(passes);
-  }, [passes]);
 
   // Flash notification helper
   const showToast = (msg: string) => {
@@ -460,9 +501,14 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Corporate Header with User Profile / Switcher */}
+      {/* Main Corporate Header with User Profile / Switcher & Cloud Indicator */}
       <Header
         currentProfile={currentProfile}
+        cloudStatus={cloudStatus}
+        onRefreshCloud={() => {
+          loadCloudPasses();
+          showToast('Checking Neon Postgres cloud database connection...');
+        }}
         onOpenReportModal={() => setIsReportModalOpen(true)}
         onOpenNewPassModal={() => {
           setEditingPass(null);

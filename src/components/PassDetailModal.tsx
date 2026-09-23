@@ -655,10 +655,11 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onPrint(pass)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
+              title="Print standard 2-page NMDC official entry pass format with instructions"
             >
-              <Printer className="w-4 h-4 text-emerald-400" />
-              <span>Print Gate Badge</span>
+              <Printer className="w-4 h-4 text-emerald-300" />
+              <span>Print Official Pass</span>
             </button>
 
             {isAdmin && (

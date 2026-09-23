@@ -26,7 +26,8 @@ import {
   RotateCcw,
   Receipt,
   Tag,
-  Layers
+  Layers,
+  FileText
 } from 'lucide-react';
 
 interface PassFormModalProps {
@@ -134,6 +135,23 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   // Document attachment
   const [approvedDocFile, setApprovedDocFile] = useState<ApprovedDocument | null>(
     pass?.approvedDocument || null
+  );
+
+  // Official Standard NMDC Print Form Fields
+  const [contractorFirm, setContractorFirm] = useState(
+    pass?.contractorFirm || 'M/s Amnex Info Technologies Ltd.'
+  );
+  const [nameOfWork, setNameOfWork] = useState(
+    pass?.nameOfWork || 'Implementation of Unified Mine Logistics Management and Surveillance system (UMLMSS)'
+  );
+  const [workOrderNo, setWorkOrderNo] = useState(
+    pass?.workOrderNo || 'Letters of Awards of Contract(LAC) Dated 27/04/2026 Vide\nHO(contract)/NMDC/UMLMSS/2025/275/395\nHO(contract)/NMDC/UMLMSS/2025/275/396\nHO(contract)/NMDC/UMLMSS/2025/275/397'
+  );
+  const [stepneyAttachment, setStepneyAttachment] = useState(
+    pass?.stepneyAttachment || '---------------------'
+  );
+  const [vehicleCondition, setVehicleCondition] = useState<'Loaded' | 'Empty'>(
+    pass?.vehicleCondition || 'Loaded'
   );
 
   // Handle pass type change and adjust passNumber prefix
@@ -286,6 +304,11 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
       employees: employees.filter(e => e.name.trim() !== ''),
       followUpNotes,
       approvedDocument: approvedDocFile || undefined,
+      contractorFirm,
+      nameOfWork,
+      workOrderNo,
+      stepneyAttachment,
+      vehicleCondition,
     };
 
     if (passType === 'Vehicle') {
@@ -1037,6 +1060,74 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
               placeholder="e.g. Police verification verified, safety induction completed, returnable tools inspected..."
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
             />
+          </div>
+
+          {/* Official Standard NMDC Donimalai Mine Print Configuration */}
+          <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-blue-700" />
+                <span>Official NMDC Standard Print Details (Donimalai Mine 2-Page Format)</span>
+              </h3>
+              <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                Print Format
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  1. Contractor / Firm Name
+                </label>
+                <input
+                  type="text"
+                  value={contractorFirm}
+                  onChange={(e) => setContractorFirm(e.target.value)}
+                  placeholder="M/s Amnex Info Technologies Ltd."
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  Vehicle Condition (Loaded / Empty)
+                </label>
+                <select
+                  value={vehicleCondition}
+                  onChange={(e) => setVehicleCondition(e.target.value as 'Loaded' | 'Empty')}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
+                >
+                  <option value="Loaded">Loaded</option>
+                  <option value="Empty">Empty</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  2. Name of Work and Reason for Entry / Exit
+                </label>
+                <input
+                  type="text"
+                  value={nameOfWork}
+                  onChange={(e) => setNameOfWork(e.target.value)}
+                  placeholder="Implementation of Unified Mine Logistics Management and Surveillance system (UMLMSS)"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  4. Work Order No. / LOI / Authority Letter
+                </label>
+                <textarea
+                  rows={3}
+                  value={workOrderNo}
+                  onChange={(e) => setWorkOrderNo(e.target.value)}
+                  placeholder="Letters of Awards of Contract(LAC) Dated 27/04/2026..."
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-mono focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Actions */}

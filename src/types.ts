@@ -125,6 +125,13 @@ export interface EntryPass {
   billDocument?: ApprovedDocument; // Uploaded Bill Copy (PDF / Scan)
   rgpPurpose?: string; // e.g., Calibration, Testing, Maintenance, Loan
   nrgpStoreReceiptNo?: string; // e.g., NMDC Store GRN / SRN number
+
+  // Official NMDC Donimalai Standard Pass Print Fields
+  contractorFirm?: string; // e.g., 'M/s Amnex Info Technologies Ltd.'
+  nameOfWork?: string; // e.g., 'Implementation of Unified Mine Logistics Management and Surveillance system (UMLMSS)'
+  workOrderNo?: string; // e.g., 'Letters of Awards of Contract(LAC) Dated 27/04/2026 Vide HO(contract)/NMDC/UMLMSS/2025/275/395...'
+  stepneyAttachment?: string; // Attachment / Stepney details
+  vehicleCondition?: 'Loaded' | 'Empty'; // 'Loaded' | 'Empty'
   
   // Approved Pass Document (Uploaded signed/received pass & downloadable link)
   approvedDocument?: ApprovedDocument;

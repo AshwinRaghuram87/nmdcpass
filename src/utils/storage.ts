@@ -1,5 +1,4 @@
 import { EntryPass, ProcedureStage, DESIGNATED_GATES } from '../types';
-import { INITIAL_PASSES } from '../data/initialPasses';
 
 const STORAGE_KEY = 'amnex_nmdc_entry_passes_v3_clean';
 
@@ -8,7 +7,6 @@ export function normalizePasses(parsed: any[]): EntryPass[] {
   const today = new Date().toISOString().split('T')[0];
 
   return parsed.map((p: any) => {
-    // Normalize designated gate
     let gateNumber = p.gateNumber || 'DIOM';
     if (gateNumber.includes('Gate No. 1') || gateNumber.includes('Admin')) {
       gateNumber = 'Admin Building';
@@ -23,10 +21,8 @@ export function normalizePasses(parsed: any[]): EntryPass[] {
       gateNumber = 'DIOM';
     }
 
-    // Normalize department default
     const departmentOrProject = p.departmentOrProject || 'C&IT';
 
-    // Normalize procedureStage
     let procedureStage: ProcedureStage = p.procedureStage;
     if (!procedureStage) {
       if (p.approvedDocument || p.cisfVerified) {
@@ -69,7 +65,6 @@ export function loadStoredPasses(): EntryPass[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) {
-      saveStoredPasses([]);
       return [];
     }
     const parsed = JSON.parse(raw);
@@ -81,49 +76,78 @@ export function loadStoredPasses(): EntryPass[] {
 }
 
 /**
- * Synchronously writes to localStorage and asynchronously syncs to Vercel KV cloud
+ * Synchronously writes to localStorage and returns a promise for cloud sync
  */
-export function saveStoredPasses(passes: EntryPass[]): void {
+export function saveStoredPasses(passes: EntryPass[]): Promise<boolean> {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(passes));
   } catch (err) {
     console.error('Failed to save passes to localStorage', err);
   }
 
-  // Asynchronously push to Vercel KV endpoint
-  syncPassesToCloud(passes).catch((err) => {
-    // Non-blocking: will retry next time or stay cached in browser
-    console.debug('Cloud sync queued', err);
-  });
+  // Push to serverless database endpoint
+  return syncPassesToCloud(passes);
+}
+
+export interface CloudFetchResult {
+  source: 'vercel_postgres' | 'vercel_kv' | 'local_fallback' | 'error';
+  passes: EntryPass[];
+  connected: boolean;
+  message?: string;
 }
 
 /**
- * Fetch latest passes from Vercel KV
+ * Fetch latest passes from cloud (Postgres / Neon / KV)
  */
-export async function fetchPassesFromCloud(): Promise<{ source: string; passes: EntryPass[] } | null> {
+export async function fetchPassesFromCloud(): Promise<CloudFetchResult> {
   try {
     const response = await fetch('/api/passes', {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return {
+        source: 'error',
+        passes: loadStoredPasses(),
+        connected: false,
+        message: `HTTP ${response.status}: Failed to reach /api/passes`
+      };
+    }
 
     const data = await response.json();
-    if (data && data.passes && Array.isArray(data.passes)) {
+    const isCloudConnected = data.source === 'vercel_postgres' || data.source === 'vercel_kv';
+
+    if (data && Array.isArray(data.passes)) {
       const normalized = normalizePasses(data.passes);
-      // Update local storage cache
+      // Keep local storage fresh with cloud source
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       } catch (e) {
         // ignore
       }
-      return { source: data.source || 'vercel_kv', passes: normalized };
+      return {
+        source: data.source,
+        passes: normalized,
+        connected: isCloudConnected,
+        message: data.message
+      };
     }
-    return null;
-  } catch (err) {
-    console.debug('No serverless KV active, keeping local cache', err);
-    return null;
+
+    return {
+      source: data.source || 'local_fallback',
+      passes: loadStoredPasses(),
+      connected: isCloudConnected,
+      message: data.message
+    };
+  } catch (err: any) {
+    console.warn('API /api/passes not reachable, running locally:', err);
+    return {
+      source: 'local_fallback',
+      passes: loadStoredPasses(),
+      connected: false,
+      message: err?.message || 'Network error'
+    };
   }
 }
 
@@ -135,25 +159,34 @@ export async function syncPassesToCloud(passes: EntryPass[]): Promise<boolean> {
     const response = await fetch('/api/passes', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify({ passes })
     });
 
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.warn(`Cloud sync responded with HTTP ${response.status}`);
+      return false;
+    }
     const res = await response.json();
     return res.status === 'success';
   } catch (err) {
+    console.warn('Cloud sync could not reach /api/passes:', err);
     return false;
   }
 }
 
 export function clearAllPasses(): EntryPass[] {
-  saveStoredPasses([]);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {
+    // ignore
+  }
+  syncPassesToCloud([]).catch(() => {});
   return [];
 }
 
 export function resetToDefaultPasses(): EntryPass[] {
-  saveStoredPasses([]);
-  return [];
+  return clearAllPasses();
 }

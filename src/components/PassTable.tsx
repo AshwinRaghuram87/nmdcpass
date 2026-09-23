@@ -621,14 +621,14 @@ export const PassTable: React.FC<PassTableProps> = ({
                           <Eye className="w-4 h-4" />
                         </button>
 
-                        {/* Print Badge Button - Both Roles */}
+                        {/* Print Official Pass Button - Both Roles */}
                         <button
                           id={`btn-print-${pass.id}`}
                           onClick={() => onPrintPass(pass)}
-                          title="Generate Printable CISF Security Gate Pass Badge"
-                          className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition cursor-pointer"
+                          title="Print Official Donimalai Mine Entry Pass (Standard 2-Page Format)"
+                          className="p-1.5 text-slate-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition cursor-pointer"
                         >
-                          <Printer className="w-4 h-4" />
+                          <Printer className="w-4 h-4 text-indigo-600" />
                         </button>
 
                         {/* Edit & Delete - Admin Only */}
