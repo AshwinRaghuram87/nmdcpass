@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { EntryPass } from '../types';
 import { 
   X, 
   FileText, 
-  Printer, 
   Download, 
   ShieldCheck, 
   RotateCcw, 
@@ -51,8 +50,105 @@ export const PassReportModal: React.FC<PassReportModalProps> = ({
     activeTab === 'general' ? generalPasses :
     passes;
 
+  const printContainerRef = useRef<HTMLDivElement>(null);
+
   const handlePrint = () => {
-    window.print();
+    const container = printContainerRef.current;
+    if (!container) {
+      window.print();
+      return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      window.print();
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>NMDC Donimalai Audit Report</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              box-sizing: border-box !important;
+            }
+            body {
+              font-family: serif;
+              color: #000;
+              background: #fff;
+              margin: 0;
+              padding: 10mm;
+              width: 210mm;
+            }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #000; padding: 6px; font-size: 9pt; }
+            th { background: #f1f5f9; font-weight: bold; }
+            .print-page-container {
+              width: 190mm !important;
+              height: 277mm !important;
+              min-height: 277mm !important;
+              margin: 0 auto !important;
+              background: #fff !important;
+              page-break-after: always !important;
+              break-after: page !important;
+              position: relative !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
+            }
+          </style>
+        </head>
+        <body>
+    `);
+
+    const pageContainers = container.querySelectorAll('.print-page-container');
+    if (pageContainers.length > 0) {
+      pageContainers.forEach((el) => {
+        const clone = el.cloneNode(true) as HTMLElement;
+        clone.style.pageBreakAfter = 'always';
+        clone.style.breakAfter = 'page';
+        doc.write(clone.outerHTML);
+      });
+    } else {
+      doc.write(container.innerHTML);
+    }
+
+    doc.write(`
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.contentWindow?.focus();
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 500);
   };
 
   const handleExportSectionExcel = () => {
@@ -147,13 +243,6 @@ export const PassReportModal: React.FC<PassReportModalProps> = ({
             </button>
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print Report</span>
-            </button>
-            <button
-              onClick={handlePrint}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs"
               title="Export A4 PDF report"
             >
@@ -223,7 +312,7 @@ export const PassReportModal: React.FC<PassReportModalProps> = ({
         </div>
 
         {/* Printable & Scrollable Report Content */}
-        <div className="p-6 overflow-y-auto flex-1 print:p-0 print:overflow-visible text-slate-900 space-y-6">
+        <div ref={printContainerRef} className="p-6 overflow-y-auto flex-1 print:p-0 print:overflow-visible text-slate-900 space-y-6">
           
           {/* Printable Letterhead Header */}
           <div className="border-b-2 border-slate-900 pb-4">

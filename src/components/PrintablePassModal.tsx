@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { EntryPass, PassEmployee, EmployeeCarriedItem } from '../types';
 import { formatGatePassNumber } from '../utils/passUtils';
+import { exportPassesToExcel } from '../utils/excelHelper';
 import { 
   X, 
-  Printer, 
   Download,
   ShieldCheck, 
   Plus, 
@@ -11,7 +11,8 @@ import {
   Check, 
   Briefcase,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface PrintablePassModalProps {
@@ -20,9 +21,9 @@ interface PrintablePassModalProps {
 }
 
 export const PrintablePassModal: React.FC<PrintablePassModalProps> = ({ pass, onClose }) => {
-  // Print layout: 'standard' (Attachment 1 & 2), 'materials' (Material Consignment Pass), 'badge' (Gate Badge)
-  const [printLayout, setPrintLayout] = useState<'standard' | 'materials' | 'badge'>(
-    pass?.passType === 'Materials' ? 'materials' : 'standard'
+  // Print layout: 'standard' (Attachment 1 & 2), 'materials' (Material Consignment Pass), 'badge' (Gate Badge), 'annexure' (Annexure-I Material Gate Pass)
+  const [printLayout, setPrintLayout] = useState<'standard' | 'materials' | 'badge' | 'annexure'>(
+    pass?.passType === 'Materials' ? 'annexure' : 'standard'
   );
   const [includeInstructions, setIncludeInstructions] = useState(true);
   
@@ -231,8 +232,151 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
         }
       ];
 
+  const printContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleExportExcel = () => {
+    if (!pass) return;
+    exportPassesToExcel([pass]);
+  };
+
   const handlePrint = () => {
-    window.print();
+    const container = printContainerRef.current;
+    if (!container) {
+      window.print();
+      return;
+    }
+
+    // Create a dedicated hidden iframe for printing
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      window.print();
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Gate Pass - NMDC Donimalai</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              box-sizing: border-box !important;
+            }
+            body {
+              font-family: serif;
+              color: #000;
+              background: #fff;
+              margin: 0;
+              padding: 0;
+              width: 210mm;
+            }
+            .print-page-1 {
+              width: 190mm !important;
+              height: 292mm !important;
+              min-height: 292mm !important;
+              margin: 0 auto !important;
+              background: #fff !important;
+              page-break-after: always !important;
+              break-after: page !important;
+              position: relative !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
+              padding: 10mm !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
+            }
+            .print-page-container {
+              width: 190mm !important;
+              height: 277mm !important;
+              min-height: 277mm !important;
+              margin: 0 auto !important;
+              background: #fff !important;
+              page-break-after: always !important;
+              break-after: page !important;
+              position: relative !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
+              padding: 10mm !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
+            }
+            table { width: 100%; border-collapse: collapse; }
+            img { max-width: 100%; height: auto; }
+            .border-black { border-color: #000 !important; }
+            .border { border-width: 1px !important; border-style: solid !important; }
+            .border-b { border-bottom-width: 1px !important; border-style: solid !important; }
+            .border-r { border-right-width: 1px !important; border-style: solid !important; }
+            .font-bold { font-weight: 700 !important; }
+            .font-black { font-weight: 900 !important; }
+            .uppercase { text-transform: uppercase !important; }
+            .flex { display: flex !important; }
+            .justify-between { justify-content: space-between !important; }
+            .items-center { align-items: center !important; }
+            .text-center { text-align: center !important; }
+            .text-right { text-align: right !important; }
+            .text-xs { font-size: 11px !important; }
+            .text-[7.5pt] { font-size: 7.5pt !important; }
+            .text-[8pt] { font-size: 8pt !important; }
+            .text-[9.5pt] { font-size: 9.5pt !important; }
+            .text-[10pt] { font-size: 10pt !important; }
+            .text-[11pt] { font-size: 11pt !important; }
+          </style>
+        </head>
+        <body>
+    `);
+
+    // Iterate through DOM and explicitly apply page-break-after: always to each pass container
+    const pageContainers = container.querySelectorAll('.print-page-1, .print-page-container');
+    if (pageContainers.length > 0) {
+      pageContainers.forEach((el) => {
+        const clone = el.cloneNode(true) as HTMLElement;
+        clone.style.pageBreakAfter = 'always';
+        clone.style.breakAfter = 'page';
+        clone.style.minHeight = '277mm';
+        clone.style.width = '190mm';
+        clone.style.margin = '0 auto';
+        clone.style.background = '#fff';
+        clone.style.boxSizing = 'border-box';
+        doc.write(clone.outerHTML);
+      });
+    } else {
+      doc.write(container.innerHTML);
+    }
+
+    doc.write(`
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.contentWindow?.focus();
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 500);
   };
 
   const showAtt1 = activeAttachmentFilter === 'all' || activeAttachmentFilter === 'att1';
@@ -313,6 +457,17 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
               >
                 Gate Badge
               </button>
+              <button
+                type="button"
+                onClick={() => setPrintLayout('annexure')}
+                className={`px-3 py-1 rounded font-semibold transition cursor-pointer ${
+                  printLayout === 'annexure' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Annexure-I Material Pass
+              </button>
             </div>
 
             {printLayout === 'standard' && (
@@ -368,22 +523,25 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
               </label>
             )}
 
-            {/* Print and Export A4 PDF buttons */}
+            {/* Export Excel button */}
             <button
               type="button"
-              onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              title="Download pass as Excel spreadsheet (.xlsx)"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print / Save PDF</span>
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Export Excel</span>
             </button>
+
+            {/* Export A4 PDF button */}
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
-              title="Export formatted A4 PDF (Select Save as PDF and A4 size in print dialog)"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              title="Export formatted A4 PDF (Select Save as PDF and A4 size)"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               <span>Export A4 PDF</span>
             </button>
 
@@ -400,7 +558,7 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
         </div>
 
         {/* Modal Scroll Body */}
-        <div className="p-4 sm:p-8 bg-slate-100 overflow-y-auto max-h-[85vh] print:p-0 print:m-0 print:max-h-none print:overflow-visible print:bg-white">
+        <div ref={printContainerRef} className="p-4 sm:p-8 bg-slate-100 overflow-y-auto max-h-[85vh] print:p-0 print:m-0 print:max-h-none print:overflow-visible print:bg-white">
           
           {printLayout === 'standard' ? (
             /* =========================================================================
@@ -410,7 +568,7 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
               
               {/* ------------------------- PAGE 1 (GATE PASS) ------------------------- */}
               {showAtt1 && (
-                <div className="page-break-after print-page-container bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt]">
+                <div className="page-break-after print-page-1 bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt]">
                   
                   {/* Exact PDF Header with Logo */}
                   <div className="border border-black flex mb-2">
@@ -677,7 +835,7 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
 
               {/* ------------------------- PAGE 2 (INSTRUCTIONS) ------------------------- */}
               {showAtt1 && includeInstructions && (
-                <div className="page-break-after bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt] text-slate-900">
+                <div className="page-break-after print-page-container bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt] text-slate-900">
                   
                   {/* Header without NMDC Limited or Attachment No */}
                   <div className="text-center font-bold mb-6 pt-2">
@@ -791,7 +949,7 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                 return (
                   <div 
                     key={`att2-emp-${empKey}`}
-                    className="page-break-after bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt] text-slate-900"
+                    className="page-break-after print-page-container bg-white p-8 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[11pt] text-slate-900"
                   >
                     {/* On-screen control bar for Allowed to carry (Hidden on Print) */}
                     <div className="print:hidden mb-4 bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2">
@@ -1497,6 +1655,385 @@ HO(contract)/NMDC/UMLMSS/2025/275/397`;
                   </div>
                 </div>
               )}
+            </div>
+          ) : printLayout === 'annexure' ? (
+            /* =========================================================================
+               ANNEXURE-I MATERIAL GATE PASS FORMAT (Exact Match to User Attached Spec)
+               ========================================================================= */
+            <div className="space-y-8 print:space-y-0 text-black">
+              {/* PAGE 1: ANNEXURE-I MATERIAL GATE PASS */}
+              <div className="page-break-after print-page-1 bg-white p-6 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-tight text-[10pt]">
+                
+                {/* Header Box */}
+                <div className="border border-black flex mb-2">
+                  <div className="w-[15%] border-r border-black p-1 flex items-center justify-center">
+                    <img src="/nmdc_logo.jpg" alt="NMDC Logo" className="max-h-14 w-auto object-contain" />
+                  </div>
+                  <div className="w-[70%] border-r border-black p-1.5 text-center flex flex-col justify-center">
+                    {pass.materialCategory === 'Returnable' ? (
+                      <>
+                        <div className="font-bold text-[12pt] tracking-wide">DONIMALAI IRON ORE MINE</div>
+                        <div className="text-[10pt] font-extrabold uppercase mt-1 text-blue-950">ENTRY PASS (Returnable)</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-bold text-[11pt] tracking-wide">DONIMALAI COMPLEX</div>
+                        <div className="text-[8pt] font-semibold">INTEGRATED MANAGEMENT SYSTEM</div>
+                        <div className="text-[7.5pt] font-bold mt-0.5">STANDARD OPERATING PROCEDURE (SOP)</div>
+                        <div className="text-[7.5pt] font-bold">Material Gate Pass Entry at CISF Check Post</div>
+                        <div className="text-[9pt] font-extrabold uppercase mt-0.5 text-blue-900 underline">
+                          Non-Returnable Material Gate Pass
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="w-[15%] p-1 text-[7.5pt] flex flex-col justify-center space-y-0.5 pl-2">
+                    <div><b>Ref No.</b> 01</div>
+                    <div><b>Date:</b> {pass.validFrom}</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center text-[9pt] font-semibold mb-2">
+                  <span>{pass.materialCategory === 'Returnable' ? '(To be issued by Head of the Department )' : '(To be issued by the concerned Head of Department)'}</span>
+                  <span className="font-bold border border-black px-2 py-0.5 bg-slate-100">Annexure-I</span>
+                </div>
+
+                {/* Main Pass Table */}
+                <table className="w-full border-collapse border border-black text-[9.5pt]">
+                  <tbody>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold w-[30%]">Name of Department</td>
+                      <td className="border border-black p-1.5 font-semibold w-[70%]">{pass.departmentOrProject || 'C&IT Department'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold">Gatepass No & Date</td>
+                      <td className="border border-black p-1.5 font-mono font-bold">{pass.passNumber} &nbsp;&nbsp;|&nbsp;&nbsp; Date: {pass.validFrom}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold">1. Name of Contractor/Firm</td>
+                      <td className="border border-black p-1.5 font-semibold">{pass.contractorFirm || 'M/s Amnex Infotechnologies Pvt. Ltd'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold">2. Name of Work/Purpose</td>
+                      <td className="border border-black p-1.5">{pass.nameOfWork || 'UMLMSS Project Work Implementations.'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold">3. Work Site/Location</td>
+                      <td className="border border-black p-1.5">{pass.gateNumber || 'KIOM/DIOM/PPT/Admin Building'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold">4. Workorder No / LOI / Authority Letter</td>
+                      <td className="border border-black p-1.5 font-mono text-[9pt] whitespace-pre-line">{pass.workOrderNo || 'Letters of Awards of Contract(LAC) Vide HO(contract)/NMDC/UMLMSS/2025/275/395'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold">5. Validity of Gatepass</td>
+                      <td className="border border-black p-1.5 font-bold text-blue-900">{pass.validFrom} to {pass.validTo}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold">6. No. Of Persons Allowed</td>
+                      <td className="border border-black p-1.5 font-bold">{employeesList.length.toString().padStart(2, '0')}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Details of Persons */}
+                <div className="mt-3 font-bold text-[9.5pt]">Details of Persons:</div>
+                <table className="w-full border-collapse border border-black text-[9pt] mt-1">
+                  <thead>
+                    <tr className="bg-slate-100 text-center font-bold">
+                      <th className="border border-black p-1 w-10">Sl. No</th>
+                      <th className="border border-black p-1 text-left">Name</th>
+                      <th className="border border-black p-1 w-12">Sex</th>
+                      <th className="border border-black p-1 w-12">Age</th>
+                      <th className="border border-black p-1 w-10">Sl.No</th>
+                      <th className="border border-black p-1 text-left">Name</th>
+                      <th className="border border-black p-1 w-12">Sex</th>
+                      <th className="border border-black p-1 w-12">Age</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: Math.ceil(employeesList.length / 2) }).map((_, rowIndex) => {
+                      const emp1 = employeesList[rowIndex * 2];
+                      const emp2 = employeesList[rowIndex * 2 + 1];
+                      return (
+                        <tr key={rowIndex}>
+                          <td className="border border-black p-1 text-center font-bold">{rowIndex * 2 + 1}.</td>
+                          <td className="border border-black p-1 font-semibold">{emp1?.name || ''}</td>
+                          <td className="border border-black p-1 text-center">{emp1?.sex || 'M'}</td>
+                          <td className="border border-black p-1 text-center">{emp1?.age || '25'}</td>
+                          <td className="border border-black p-1 text-center font-bold">{emp2 ? rowIndex * 2 + 2 : ''}.</td>
+                          <td className="border border-black p-1 font-semibold">{emp2?.name || ''}</td>
+                          <td className="border border-black p-1 text-center">{emp2?.sex || ''}</td>
+                          <td className="border border-black p-1 text-center">{emp2?.age || ''}</td>
+                        </tr>
+                      );
+                    })}
+                    {employeesList.length === 0 && (
+                      <tr>
+                        <td className="border border-black p-1 text-center">1.</td>
+                        <td className="border border-black p-1">B Shivamurthy</td>
+                        <td className="border border-black p-1 text-center">M</td>
+                        <td className="border border-black p-1 text-center">35</td>
+                        <td className="border border-black p-1 text-center">2.</td>
+                        <td className="border border-black p-1"></td>
+                        <td className="border border-black p-1 text-center"></td>
+                        <td className="border border-black p-1 text-center"></td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Details of Vehicle */}
+                <div className="mt-3 font-bold text-[9.5pt]">Details of Vehicle:</div>
+                <table className="w-full border-collapse border border-black text-[9pt] mt-1">
+                  <thead>
+                    <tr className="bg-slate-100 text-center font-bold">
+                      <th className="border border-black p-1 w-10">Sl. No</th>
+                      <th className="border border-black p-1 text-left">Type of Vehicle</th>
+                      <th className="border border-black p-1">Registration No</th>
+                      <th className="border border-black p-1">Condition Loaded/Empty</th>
+                      <th className="border border-black p-1">Attachment Stepney if any</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-black p-1 text-center font-bold">1.</td>
+                      <td className="border border-black p-1 font-semibold">{pass.vehicleType || 'Mahindra Bolero / Commercial Van'}</td>
+                      <td className="border border-black p-1 font-mono font-bold text-center">{pass.vehicleNumber || 'KA 35 P 4102'}</td>
+                      <td className="border border-black p-1 text-center font-semibold">{pass.vehicleCondition || 'Loaded'}</td>
+                      <td className="border border-black p-1 text-center">{pass.stepneyAttachment || '---'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* List of Items */}
+                <div className="mt-2 font-bold text-[9pt]">
+                  {pass.materialItems && pass.materialItems.length > 5 ? (
+                    <div className="flex justify-between items-center bg-slate-100 border border-black p-1.5">
+                      <span>List of Items , Tools and Tackles carried along with above persons:</span>
+                      <span className="text-blue-900 font-extrabold underline">[SEE ATTACHED SEPARATE LIST ON PAGE 2]</span>
+                    </div>
+                  ) : (
+                    <span>List of Items , Tools and Tackles carried along with the above persons if any , for more items attach separate list</span>
+                  )}
+                </div>
+                <table className="w-full border-collapse border border-black text-[9pt] mt-1">
+                  <thead>
+                    <tr className="bg-slate-100 text-center font-bold">
+                      <th className="border border-black p-1 w-10">Sl No</th>
+                      <th className="border border-black p-1 text-left">Name, Nomenclature of item</th>
+                      <th className="border border-black p-1 w-14">Unit</th>
+                      <th className="border border-black p-1 w-12">Qty</th>
+                      <th className="border border-black p-1 w-10">Sl No</th>
+                      <th className="border border-black p-1 text-left">Name, Nomenclature of item</th>
+                      <th className="border border-black p-1 w-14">Unit</th>
+                      <th className="border border-black p-1 w-12">Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const items = pass.materialItems || [];
+                      // If items > 5, show first 5 on page 1, remaining on page 2
+                      const displayItems = items.length > 5 ? items.slice(0, 5) : items;
+                      const rows = [];
+                      for (let i = 0; i < Math.max(displayItems.length, 4); i += 2) {
+                        const item1 = displayItems[i];
+                        const item2 = displayItems[i + 1];
+                        rows.push(
+                          <tr key={i}>
+                            <td className="border border-black p-1 text-center">{item1 ? i + 1 : ''}</td>
+                            <td className="border border-black p-1 font-semibold">{item1?.itemName || ''}</td>
+                            <td className="border border-black p-1 text-center">{item1?.unit || (item1 ? 'No' : '')}</td>
+                            <td className="border border-black p-1 text-center font-bold">{item1?.quantity || ''}</td>
+                            <td className="border border-black p-1 text-center">{item2 ? i + 2 : ''}</td>
+                            <td className="border border-black p-1 font-semibold">{item2?.itemName || ''}</td>
+                            <td className="border border-black p-1 text-center">{item2?.unit || (item2 ? 'No' : '')}</td>
+                            <td className="border border-black p-1 text-center font-bold">{item2?.quantity || ''}</td>
+                          </tr>
+                        );
+                      }
+                      return rows;
+                    })()}
+                    {pass.materialItems && pass.materialItems.length > 5 && (
+                      <tr>
+                        <td colSpan={8} className="border border-black p-1.5 text-center font-bold text-blue-900 bg-slate-50 text-[8.5pt]">
+                          + {pass.materialItems.length - 5} more item(s) continued on Attached Separate Item List (Page 2)
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Signatures Block */}
+                <table className="w-full border-collapse border border-black text-[8.5pt] mt-3">
+                  <thead>
+                    <tr className="bg-slate-100 font-bold text-center">
+                      <th className="border border-black p-1 w-[22%]">Gate pass</th>
+                      <th className="border border-black p-1 w-[26%]">Checked By</th>
+                      <th className="border border-black p-1 w-[26%]">Recommended By</th>
+                      <th className="border border-black p-1 w-[26%]">Issued By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-black p-1.5 h-10 align-bottom text-center text-slate-500 font-serif italic">Signature</td>
+                      <td className="border border-black p-1.5 h-10 align-bottom text-center"></td>
+                      <td className="border border-black p-1.5 h-10 align-bottom text-center"></td>
+                      <td className="border border-black p-1.5 h-10 align-bottom text-center"></td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1 font-bold">Name</td>
+                      <td className="border border-black p-1 font-semibold text-center">Mr. Mayur Kant Tripathi</td>
+                      <td className="border border-black p-1 font-semibold text-center">A.V.L Ramakrishna</td>
+                      <td className="border border-black p-1 font-semibold text-center">{pass.materialCategory === 'Returnable' ? 'T.Chiranjeevi' : 'Sreekanth Babu B'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1 font-bold">Designation</td>
+                      <td className="border border-black p-1 text-center">DGM(Electrical) /(C&IT)</td>
+                      <td className="border border-black p-1 text-center">DGM(C&IT)</td>
+                      <td className="border border-black p-1 text-center">{pass.materialCategory === 'Returnable' ? 'Sr. Manager (Chemical)' : 'DGM(C&IT)/HOD'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1 font-bold">Contact No/Mobile</td>
+                      <td className="border border-black p-1 text-center font-mono">8148594570</td>
+                      <td className="border border-black p-1 text-center font-mono">9754233182</td>
+                      <td className="border border-black p-1 text-center font-mono">9032639870</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-1 font-bold">Department</td>
+                      <td className="border border-black p-1 text-center">C&IT</td>
+                      <td className="border border-black p-1 text-center">C&IT</td>
+                      <td className="border border-black p-1 text-center">C&IT</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Footer Copies */}
+                <div className="flex justify-between items-center text-[9pt] font-black uppercase mt-2 pt-1 border-t border-black">
+                  <span>(1) OFFICE COPY</span>
+                  <span>(2) CUSTOMER COPY</span>
+                  <span>(3) CISF COPY</span>
+                </div>
+
+              </div>
+
+              {/* PAGE 2 (Conditional): ATTACHMENT SCHEDULE - DETAILED ITEMIZED LIST OF MATERIALS (Only if items > 5) */}
+              {pass.materialItems && pass.materialItems.length > 5 && (
+                <div className="page-break-before page-break-after print-page-container bg-white p-6 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-tight text-[10pt]">
+                  <div className="border border-black flex mb-4">
+                    <div className="w-[15%] border-r border-black p-1 flex items-center justify-center">
+                      <img src="/nmdc_logo.jpg" alt="NMDC Logo" className="max-h-14 w-auto object-contain" />
+                    </div>
+                    <div className="w-[70%] border-r border-black p-2 text-center flex flex-col justify-center">
+                      <div className="font-bold text-[11pt] tracking-wide">DONIMALAI COMPLEX</div>
+                      <div className="text-[8pt] font-semibold">INTEGRATED MANAGEMENT SYSTEM — MATERIAL GATE PASS</div>
+                      <div className="text-[9.5pt] font-extrabold uppercase mt-1 text-blue-900 underline">
+                        ATTACHMENT SCHEDULE: ITEMIZED LIST OF MATERIALS ({pass.materialItems?.length || 0} ITEMS)
+                      </div>
+                    </div>
+                    <div className="w-[15%] p-1 text-[7.5pt] flex flex-col justify-center space-y-0.5 pl-2">
+                      <div><b>Pass No:</b> {pass.passNumber}</div>
+                      <div><b>Date:</b> {pass.validFrom}</div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 text-[9pt] space-y-1">
+                    <div><b>Contractor / Firm:</b> {pass.contractorFirm || 'M/s Amnex Infotechnologies Pvt. Ltd.'}</div>
+                    <div><b>Work / Purpose:</b> {pass.nameOfWork || 'UMLMSS Project Work Implementations.'}</div>
+                    <div><b>Gate / Location:</b> {pass.gateNumber || 'KIOM/DIOM/PPT/Admin Building'}</div>
+                  </div>
+
+                  <div className="font-bold text-[10pt] mb-2 uppercase border-b-2 border-black pb-1">
+                    Comprehensive Consignment Items Schedule (List of Items Attached)
+                  </div>
+
+                  <table className="w-full border-collapse border border-black text-[9pt] mb-6">
+                    <thead>
+                      <tr className="bg-slate-100 font-bold text-center">
+                        <th className="border border-black p-1.5 w-12">Sl No</th>
+                        <th className="border border-black p-1.5 text-left">Item Description & Nomenclature</th>
+                        <th className="border border-black p-1.5 w-24">BOQ Ref</th>
+                        <th className="border border-black p-1.5 w-24">OEM / Make</th>
+                        <th className="border border-black p-1.5 w-24">Serial / Tag #</th>
+                        <th className="border border-black p-1.5 w-16">Unit</th>
+                        <th className="border border-black p-1.5 w-16">Qty</th>
+                        <th className="border border-black p-1.5 w-28">Bill / Challan #</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pass.materialItems.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="border border-black p-1.5 text-center font-bold">{idx + 1}</td>
+                          <td className="border border-black p-1.5 font-semibold text-slate-900">
+                            {item.itemName}
+                            {item.specification && <span className="block text-[8pt] text-slate-600 font-normal">{item.specification}</span>}
+                          </td>
+                          <td className="border border-black p-1.5 font-mono text-center text-xs">{item.boqItemNumber || '---'}</td>
+                          <td className="border border-black p-1.5 text-center text-xs">{item.oem || '---'}</td>
+                          <td className="border border-black p-1.5 font-mono text-center text-xs">{item.serialNumber || '---'}</td>
+                          <td className="border border-black p-1.5 text-center">{item.unit || 'Nos'}</td>
+                          <td className="border border-black p-1.5 text-center font-bold">{item.quantity}</td>
+                          <td className="border border-black p-1.5 font-mono text-center text-xs">{item.billNumber || pass.billNumber || '---'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="border-t border-black pt-4 flex justify-between items-center text-[9pt]">
+                    <div>Certified that the above listed {pass.materialItems?.length || 0} items are attached and verified.</div>
+                    <div className="text-right font-bold">Authorized Signatory / EIC</div>
+                  </div>
+                </div>
+              )}
+
+              {/* FINAL PAGE: INSTRUCTIONS & DECLARATION */}
+              <div className="page-break-before print-page-container bg-white p-6 sm:p-10 shadow-md border border-slate-300 print:shadow-none print:border-none print:p-0 font-serif leading-relaxed text-[10pt]">
+                <div className="font-bold underline mb-3 text-[11pt]">
+                  {pass.materialCategory === 'Returnable' ? 'INSTRUCTIONS TO THE PASS HOLDERS:' : 'INSTRUCTIONS TO THE PASS HOLDER(S)'}
+                </div>
+                {pass.materialCategory === 'Returnable' ? (
+                  <ol className="list-decimal pl-5 space-y-2 text-[9pt]">
+                    <li>Pass holder(s) must carry their own photo identity Cards issued by the concerned authorities like Election Commission, Employer (in the case of employees), and Head of Institutions/firms etc.</li>
+                    <li>Pass holder(s) should not proceed for any location, installations etc. other than specified in the Gate Pass.</li>
+                    <li>It is the responsibility pass holders to observe and abide all statutory / safety rules/ guide lines etc. as applicable in the mine/OSCL Plant/Pellet Plant to avoid any untoward incident. Corporation will not be responsible for any injury, loss, damage etc. caused to the pass holder(s) due to negligence or oversight on their part and they are liable to pay to Corporation if any loss or damage caused to the Corporation.</li>
+                    <li>The employees engaged by contractors for carrying out contract works in mine area should undergo M V Training and IME (Initial Medical Examination)/PME (Periodical Medical Examination) invariably as per statutes and they should wear all safety appliances as applicable.</li>
+                    <li>The vehicle(s) entering inside the check post should be road-worthy and the Driver(s) / operator(s) must have adequate experience and valid Driving Licence issued by the concerned Authorities. (The original documents like RC Book, Licence etc. are required to be produced for checking at check post.)</li>
+                    <li>No person(s) are not allowed to travel on the dump body /uncovered rear portion /carrier of vehicles like Tippers/Trucks/ Tractors /Pick up vans etc. inside the check post.</li>
+                    <li>Two wheeler are restricted to valley store/Time office (Loading Plant) and it is totally prohibited beyond old VTC / Valley store area and Time office (Loading Plant).</li>
+                    <li>Taking video graph / photograph etc. is strictly prohibited inside the check post.</li>
+                    <li>Use of mobile phone is prohibited while operating vehicles or equipment.</li>
+                  </ol>
+                ) : (
+                  <ol className="list-decimal pl-5 space-y-2 text-[9.5pt]">
+                    <li>Pass holder(s) shall carry a valid photo identity card issued by the concerned authority / employer and produce it for verification whenever required.</li>
+                    <li>Pass holder(s) shall proceed only to the location(s) and for the purpose specified in the Gate Pass.</li>
+                    <li>Vehicles entering the premises shall be roadworthy. Drivers / operators shall possess valid driving licences and other applicable documents. Relevant documents shall be produced for verification at the security / CISF check post whenever required.</li>
+                    <li>Photography, videography or recording inside restricted / prohibited areas is strictly prohibited unless specifically authorized.</li>
+                    <li>Use of mobile phones while driving or operating vehicles / equipment is strictly prohibited.</li>
+                    <li>The Gate Pass is non-transferable and shall be used only during its specified validity period. The pass shall be surrendered / returned to the concerned authority on expiry or completion of the permitted work.</li>
+                  </ol>
+                )}
+
+                <div className="font-bold underline mt-6 mb-3 text-[11pt]">DECLARATION BY PASS HOLDER</div>
+                <p className="text-[10pt] mb-6">
+                  {pass.materialCategory === 'Returnable' ? 'All the above instructions are noted for strict compliance.' : 'I / We have read and understood the above instructions and undertake to comply with them strictly.'}
+                </p>
+
+                <div className="space-y-4 pt-4 max-w-md">
+                  <div className="flex justify-between items-end border-b border-black pb-1">
+                    <span className="font-bold text-xs">Signature:</span>
+                    <span className="text-slate-400 text-xs">_______________________________</span>
+                  </div>
+                  <div className="flex justify-between items-end border-b border-black pb-1">
+                    <span className="font-bold text-xs">Name of Pass Holder:</span>
+                    <span className="text-slate-800 text-xs font-semibold">{employeesList[0]?.name || pass.passHolderName}</span>
+                  </div>
+                  <div className="flex justify-between items-end border-b border-black pb-1">
+                    <span className="font-bold text-xs">Date:</span>
+                    <span className="text-slate-800 text-xs">{pass.validFrom}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             /* =========================================================================

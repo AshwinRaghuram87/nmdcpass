@@ -645,12 +645,12 @@ export default function App() {
           passes={filteredPasses}
           userRole={currentProfile.role}
           onViewPass={(pass) => setViewingPass(pass)}
+          onPrintPass={(pass) => setPrintingPass(pass)}
           onEditPass={(pass) => {
             setEditingPass(pass);
             setIsFormModalOpen(true);
           }}
           onDeletePass={handleDeletePass}
-          onPrintPass={(pass) => setPrintingPass(pass)}
           onUploadDocClick={(pass) => setUploadDocPass(pass)}
           onUploadBillClick={(pass) => setUploadBillPass(pass)}
           onToggleGateStatus={handleToggleGateStatus}

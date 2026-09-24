@@ -15,7 +15,7 @@ import {
   Download, 
   UploadCloud, 
   FileCheck, 
-  Printer, 
+  Printer,
   RotateCcw, 
   CheckCircle, 
   CheckCircle2,
@@ -614,8 +614,8 @@ export const PassTable: React.FC<PassTableProps> = ({
                         <button
                           id={`btn-print-${pass.id}`}
                           onClick={() => onPrintPass(pass)}
-                          title="Print Official Donimalai Mine Entry Pass (Standard 2-Page Format)"
-                          className="p-1.5 text-slate-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition cursor-pointer"
+                          title="Print Official Donimalai Mine Entry Pass (Standard & Annexure-I Format)"
+                          className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition cursor-pointer"
                         >
                           <Printer className="w-4 h-4 text-indigo-600" />
                         </button>

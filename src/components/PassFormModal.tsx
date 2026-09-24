@@ -13,6 +13,7 @@ import {
   DesignatedGate
 } from '../types';
 import { getNextPassNumber } from '../utils/passUtils';
+import { MASTER_BOQ_ITEMS } from '../utils/boqData';
 import { 
   X, 
   Plus, 
@@ -358,6 +359,50 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   const handleRemoveMaterialItem = (index: number) => {
     if (materialItems.length <= 1) return;
     setMaterialItems(materialItems.filter((_, i) => i !== index));
+  };
+
+  const getBoqConsumedQty = (itemNumber: number) => {
+    let consumed = 0;
+    existingPasses.forEach((p) => {
+      if (pass && p.id === pass.id) return;
+      if (p.materialItems) {
+        p.materialItems.forEach((m) => {
+          const matchesNum = m.boqItemNumber && (
+            m.boqItemNumber === `${itemNumber}` || 
+            m.boqItemNumber === `Item #${itemNumber}` ||
+            m.boqItemNumber === `BOQ-${itemNumber}` ||
+            m.boqItemNumber.includes(`-${itemNumber}`) ||
+            m.boqItemNumber.endsWith(` ${itemNumber}`) ||
+            m.boqItemNumber === `#${itemNumber}`
+          );
+          const boqObj = MASTER_BOQ_ITEMS.find(b => b.itemNumber === itemNumber);
+          const matchesDesc = m.itemName && boqObj && boqObj.description.toLowerCase() === m.itemName.toLowerCase();
+          if (matchesNum || matchesDesc) {
+            consumed += m.quantity || 0;
+          }
+        });
+      }
+    });
+    return consumed;
+  };
+
+  const handleSelectBoqItem = (idx: number, boqId: string) => {
+    const foundBoq = MASTER_BOQ_ITEMS.find(b => b.id === boqId);
+    if (!foundBoq) return;
+
+    const consumed = getBoqConsumedQty(foundBoq.itemNumber);
+    const remaining = Math.max(0, foundBoq.totalQuantity - consumed);
+
+    const updated = [...materialItems];
+    updated[idx] = {
+      ...updated[idx],
+      itemName: foundBoq.description,
+      boqItemNumber: `Item #${foundBoq.itemNumber}`,
+      boqNumber: `BOQ-${foundBoq.itemNumber}`,
+      unit: foundBoq.unit,
+      quantity: Math.min(updated[idx].quantity || 1, remaining > 0 ? remaining : 1),
+    };
+    setMaterialItems(updated);
   };
 
   // File upload handlers
@@ -1226,6 +1271,31 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
+
+                      {/* Master BOQ Item Dropdown (Only for Non-Returnable Material Passes) */}
+                      {passType === 'Materials' && materialCategory === 'Non-Returnable' && (
+                        <div className="bg-indigo-50/60 p-2 rounded-lg border border-indigo-200 space-y-1">
+                          <label className="block text-[11px] font-bold text-indigo-900">
+                            Select from Master BOQ List (Optional: auto-fills item details & tracks remaining quantities, or type manually below):
+                          </label>
+                          <select
+                            onChange={(e) => handleSelectBoqItem(idx, e.target.value)}
+                            defaultValue=""
+                            className="w-full px-2.5 py-1.5 bg-white border border-indigo-300 rounded text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-indigo-600 cursor-pointer"
+                          >
+                            <option value="" disabled>-- Select BOQ Item or type manually below --</option>
+                            {MASTER_BOQ_ITEMS.map((boq) => {
+                              const consumed = getBoqConsumedQty(boq.itemNumber);
+                              const remaining = Math.max(0, boq.totalQuantity - consumed);
+                              return (
+                                <option key={boq.id} value={boq.id}>
+                                  #{boq.itemNumber}: {boq.description} (Total: {boq.totalQuantity} {boq.unit}, Remaining: {remaining})
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                         {/* Item Name */}

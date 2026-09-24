@@ -11,16 +11,39 @@
     print-color-adjust: exact !important;
   }
 
-  html, body {
+  html, body, #root, div {
     background: #ffffff !important;
     color: #000000 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body {
     width: 210mm !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
+  .print-page-1 {
+    width: 190mm !important;
+    height: 292mm !important;
+    min-height: 292mm !important;
+    margin: 0 auto !important;
+    background: white !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
+  }
+
   .print-page-container {
     width: 190mm !important;
+    height: 277mm !important;
     min-height: 277mm !important;
     margin: 0 auto !important;
     background: white !important;
@@ -28,20 +51,24 @@
     break-after: page !important;
     box-sizing: border-box !important;
     position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
   }
 
   /* Force clean page breaks */
   .page-break-after {
     page-break-after: always !important;
     break-after: page !important;
-    display: block;
+    display: block !important;
     width: 100%;
   }
 
   .page-break-before {
     page-break-before: always !important;
     break-before: page !important;
-    display: block;
+    display: block !important;
     width: 100%;
   }
 

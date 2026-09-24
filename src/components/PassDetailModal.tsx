@@ -10,7 +10,6 @@ import {
   Download, 
   UploadCloud, 
   FileText, 
-  Printer, 
   Calendar, 
   Users, 
   CheckCircle, 
@@ -27,7 +26,8 @@ import {
   Layers,
   ArrowRight,
   CheckCircle2,
-  Shield
+  Shield,
+  Printer
 } from 'lucide-react';
 
 interface PassDetailModalProps {
@@ -656,7 +656,7 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
             <button
               onClick={() => onPrint(pass)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
-              title="Print standard 2-page NMDC official entry pass format with instructions"
+              title="Print official NMDC entry pass (Standard & Annexure-I format)"
             >
               <Printer className="w-4 h-4 text-emerald-300" />
               <span>Print Official Pass</span>
