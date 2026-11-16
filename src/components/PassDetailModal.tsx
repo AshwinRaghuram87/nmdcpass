@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   EntryPass, 
   UserRole,
@@ -27,8 +27,17 @@ import {
   ArrowRight,
   CheckCircle2,
   Shield,
-  Printer
+  Printer,
+  Eye,
+  Image as ImageIcon,
+  Link2,
+  ExternalLink
 } from 'lucide-react';
+import {
+  isGoogleDriveDoc,
+  isExternalDocUrl,
+  getGoogleDriveDirectDownloadUrl
+} from '../utils/passUtils';
 
 interface PassDetailModalProps {
   pass: EntryPass | null;
@@ -55,8 +64,15 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
   onToggleMaterialReturn,
   onAdvanceProcedureStage
 }) => {
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+
   if (!pass) return null;
   const isAdmin = userRole === 'admin';
+
+  const isImageDoc = (url?: string, name?: string) => {
+    if (!url) return false;
+    return url.startsWith('data:image/') || (name && /\.(jpe?g|png|webp|bmp)$/i.test(name));
+  };
 
   const triggerDownload = (docUrl: string, fileName: string) => {
     const link = document.createElement('a');
@@ -541,30 +557,67 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
 
                 {pass.billDocument ? (
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-white border border-indigo-200 rounded-lg gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
-                        <Receipt className="w-4 h-4" />
-                      </div>
+                    <div className="flex items-center gap-3">
+                      {isImageDoc(pass.billDocument.fileUrl, pass.billDocument.fileName) ? (
+                        <div 
+                          onClick={() => setPreviewImage({ url: pass.billDocument!.fileUrl, title: pass.billDocument!.fileName })}
+                          className="relative w-12 h-12 rounded-lg overflow-hidden border border-indigo-300 bg-white cursor-pointer group shrink-0 shadow-2xs"
+                          title="Click to view full image"
+                        >
+                          <img 
+                            src={pass.billDocument.fileUrl} 
+                            alt="Bill" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                            <Eye className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                          <Receipt className="w-4 h-4" />
+                        </div>
+                      )}
+
                       <div>
-                        <span className="text-xs font-bold text-slate-900 block truncate max-w-[280px]">
-                          {pass.billDocument.fileName}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-900 block truncate max-w-[240px]">
+                            {pass.billDocument.fileName}
+                          </span>
+                          {isImageDoc(pass.billDocument.fileUrl, pass.billDocument.fileName) && (
+                            <span className="px-1.5 py-0.2 text-[9px] font-bold bg-indigo-100 text-indigo-800 rounded">
+                              JPEG
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] text-slate-500">
                           Bill Ref: <strong className="font-mono text-slate-800">{pass.billNumber || pass.challanInvoiceNumber || 'On file'}</strong> • {pass.billDocument.uploadedAt}
                         </span>
                       </div>
                     </div>
 
-                    {/* Download Bill Link - Available to both Admin & User */}
-                    <button
-                      id="btn-download-bill-link"
-                      onClick={() => triggerDownload(pass.billDocument!.fileUrl, pass.billDocument!.fileName)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-xs font-bold shadow-2xs transition cursor-pointer"
-                      title="Download attached Tax Invoice / Bill"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download Bill Link</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {isImageDoc(pass.billDocument.fileUrl, pass.billDocument.fileName) && (
+                        <button
+                          onClick={() => setPreviewImage({ url: pass.billDocument!.fileUrl, title: pass.billDocument!.fileName })}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View JPEG</span>
+                        </button>
+                      )}
+
+                      {/* Download Bill Link - Available to both Admin & User */}
+                      <button
+                        id="btn-download-bill-link"
+                        onClick={() => triggerDownload(pass.billDocument!.fileUrl, pass.billDocument!.fileName)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-xs font-bold shadow-2xs transition cursor-pointer"
+                        title="Download attached Tax Invoice / Bill"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-2.5 text-xs text-indigo-700 font-medium">
@@ -581,7 +634,7 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <FileCheck className="w-4 h-4 text-emerald-600" />
-                <span>Approved Pass Document (Official Signed & Received Copy)</span>
+                <span>Approved Pass Document (Official Signed & Stamped Copy)</span>
               </h3>
               
               {isAdmin && (
@@ -591,45 +644,130 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition cursor-pointer"
                 >
                   <UploadCloud className="w-3.5 h-3.5" />
-                  <span>{pass.approvedDocument ? 'Replace Signed Pass' : 'Upload Signed Pass'}</span>
+                  <span>{pass.approvedDocument ? 'Replace / Change Link' : 'Upload / Paste Drive Link'}</span>
                 </button>
               )}
             </div>
 
-            {pass.approvedDocument ? (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 block truncate max-w-[280px]">
-                      {pass.approvedDocument.fileName}
-                    </span>
-                    <span className="text-[11px] text-slate-500 block">
-                      Uploaded by {pass.approvedDocument.uploadedBy || 'Security Office'} • {pass.approvedDocument.uploadedAt}
-                    </span>
-                  </div>
-                </div>
+            {pass.approvedDocument ? (() => {
+              const doc = pass.approvedDocument;
+              const isDrive = isGoogleDriveDoc(doc.fileUrl, doc.fileType);
+              const isImg = !isDrive && isImageDoc(doc.fileUrl, doc.fileName);
+              const driveDirectUrl = isDrive ? getGoogleDriveDirectDownloadUrl(doc.fileUrl) : null;
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {/* Download Approved Pass Link - Available to both Admin and User */}
-                  <button
-                    id="btn-download-approved-doc"
-                    onClick={() => triggerDownload(pass.approvedDocument!.fileUrl, pass.approvedDocument!.fileName)}
-                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-2xs transition cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Pass Link</span>
-                  </button>
+              return (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {isImg ? (
+                      <div 
+                        onClick={() => setPreviewImage({ url: doc.fileUrl, title: doc.fileName })}
+                        className="relative w-14 h-14 rounded-lg overflow-hidden border border-emerald-300 bg-white cursor-pointer group shrink-0 shadow-2xs"
+                        title="Click to view full image"
+                      >
+                        <img 
+                          src={doc.fileUrl} 
+                          alt="Pass Document" 
+                          className="w-full h-full object-cover group-hover:scale-105 transition"
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                          <Eye className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                    ) : isDrive ? (
+                      <div className="w-11 h-11 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <Link2 className="w-5 h-5" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                    )}
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-slate-900 block truncate max-w-[260px]">
+                          {doc.fileName}
+                        </span>
+                        {isImg && (
+                          <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-200 text-emerald-900 rounded">
+                            JPEG
+                          </span>
+                        )}
+                        {isDrive && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200 rounded">
+                            Google Drive
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
+                        {isDrive ? 'Linked' : 'Uploaded'} by {doc.uploadedBy || 'Security Office'} • {doc.uploadedAt}
+                      </span>
+                      {isDrive ? (
+                        <span className="text-[10px] text-blue-700 font-mono block truncate max-w-[300px] mt-0.5" title={doc.fileUrl}>
+                          {doc.fileUrl}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
+                          Stored in database: {doc.fileSize || 'Attached'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    {isImg && (
+                      <button
+                        onClick={() => setPreviewImage({ url: doc.fileUrl, title: doc.fileName })}
+                        className="inline-flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View JPEG</span>
+                      </button>
+                    )}
+
+                    {isDrive || isExternalDocUrl(doc.fileUrl) ? (
+                      <>
+                        <a
+                          id="btn-open-drive-doc"
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-2xs transition cursor-pointer"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          <span>{isDrive ? 'Open Google Drive' : 'Open Document'}</span>
+                        </a>
+                        {driveDirectUrl && (
+                          <a
+                            href={driveDirectUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition cursor-pointer"
+                            title="Direct download from Google Drive"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <button
+                        id="btn-download-approved-doc"
+                        onClick={() => triggerDownload(doc.fileUrl, doc.fileName)}
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-2xs transition cursor-pointer"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download Pass</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
+              );
+            })() : (
               <div className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-center bg-slate-50/50">
                 <FileCheck className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-                <p className="text-xs text-slate-600 font-medium">No approved document uploaded yet</p>
+                <p className="text-xs text-slate-600 font-medium">No approved document or Drive link attached yet</p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  {isAdmin ? 'Upload signed copy from NMDC Security / CISF Gate In-Charge' : 'Admin upload required to activate pass download link'}
+                  {isAdmin ? 'Upload signed JPEG/PDF or paste Google Drive link for the scanned pass' : 'Admin upload or Drive link required to activate pass access'}
                 </p>
               </div>
             )}
@@ -683,6 +821,45 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Lightbox Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 z-60 bg-black/85 flex items-center justify-center p-4 backdrop-blur-xs"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden p-2 border border-slate-700 shadow-2xl flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between text-white p-3 border-b border-slate-800">
+              <span className="text-xs font-bold truncate max-w-md">{previewImage.title}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => triggerDownload(previewImage.url, previewImage.title)}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </button>
+                <button 
+                  onClick={() => setPreviewImage(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-3 overflow-auto max-h-[75vh] flex items-center justify-center bg-slate-950/60 rounded-xl m-2">
+              <img 
+                src={previewImage.url} 
+                alt="Document Full View" 
+                className="max-h-[70vh] w-auto object-contain rounded-lg shadow-md"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

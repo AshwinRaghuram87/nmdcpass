@@ -415,6 +415,7 @@ export function exportPassesToExcel(passes: EntryPass[]): void {
     'Vehicle Number': pass.vehicleNumber || 'N/A',
     'Has Approved Pass Document': pass.approvedDocument ? 'Yes' : 'No',
     'Approved Pass File Name': pass.approvedDocument?.fileName || 'None',
+    'Approved Pass Drive Link': pass.approvedDocument && /^https?:\/\//i.test(pass.approvedDocument.fileUrl) ? pass.approvedDocument.fileUrl : 'N/A',
     'CISF Verified': pass.cisfVerified ? 'Yes' : 'No',
     'CISF Verifier': pass.cisfVerifierName || '',
     'Follow-up Notes': pass.followUpNotes || '',

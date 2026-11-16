@@ -1,5 +1,6 @@
 import { EntryPass, ProcedureStage, DESIGNATED_GATES } from '../types';
 import { INITIAL_PASSES } from '../data/initialPasses';
+import { idbSavePasses, idbLoadPasses } from './idbStorage';
 
 const STORAGE_KEY = 'amnex_nmdc_entry_passes_v3_clean';
 
@@ -80,79 +81,118 @@ export function loadStoredPasses(): EntryPass[] {
 }
 
 /**
- * Synchronously writes to localStorage and returns a promise for cloud sync
+ * Asynchronously writes to IndexedDB, localStorage (with quota handling), and Cloud Database
  */
-export function saveStoredPasses(passes: EntryPass[]): Promise<boolean> {
+export async function saveStoredPasses(passes: EntryPass[]): Promise<boolean> {
+  // 1. Always save full records (including attached JPEGs and docs) to IndexedDB
+  try {
+    await idbSavePasses(passes);
+  } catch (err) {
+    console.warn('IndexedDB persistence warning:', err);
+  }
+
+  // 2. Try writing to localStorage with graceful quota fallback
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(passes));
   } catch (err) {
-    console.error('Failed to save passes to localStorage', err);
+    console.warn('localStorage quota exceeded. Saving lightweight metadata to localStorage while full JPEGs remain safe in IndexedDB & Database:', err);
+    try {
+      // Store compact version in localStorage if payload is too large
+      const compactPasses = passes.map(p => ({
+        ...p,
+        approvedDocument: p.approvedDocument ? {
+          fileName: p.approvedDocument.fileName,
+          fileSize: p.approvedDocument.fileSize,
+          fileType: p.approvedDocument.fileType,
+          uploadedAt: p.approvedDocument.uploadedAt,
+          uploadedBy: p.approvedDocument.uploadedBy,
+          fileUrl: p.approvedDocument.fileUrl.length > 500 ? '[Stored In Database/IndexedDB]' : p.approvedDocument.fileUrl
+        } : undefined,
+        billDocument: p.billDocument ? {
+          fileName: p.billDocument.fileName,
+          fileSize: p.billDocument.fileSize,
+          fileType: p.billDocument.fileType,
+          uploadedAt: p.billDocument.uploadedAt,
+          uploadedBy: p.billDocument.uploadedBy,
+          fileUrl: p.billDocument.fileUrl.length > 500 ? '[Stored In Database/IndexedDB]' : p.billDocument.fileUrl
+        } : undefined
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(compactPasses));
+    } catch (compactErr) {
+      // Ignore localStorage failure as IndexedDB & backend store the true state
+    }
   }
 
-  // Push to serverless database endpoint
+  // 3. Push to server database endpoint
   return syncPassesToCloud(passes);
 }
 
 export interface CloudFetchResult {
-  source: 'vercel_postgres' | 'vercel_kv' | 'local_fallback' | 'error';
+  source: 'server_database' | 'indexeddb' | 'vercel_postgres' | 'vercel_kv' | 'local_fallback' | 'error';
   passes: EntryPass[];
   connected: boolean;
   message?: string;
 }
 
 /**
- * Fetch latest passes from cloud (Postgres / Neon / KV)
+ * Fetch latest passes from Cloud / Server Database / IndexedDB
  */
 export async function fetchPassesFromCloud(): Promise<CloudFetchResult> {
+  // 1. Try server endpoint
   try {
     const response = await fetch('/api/passes', {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
 
-    if (!response.ok) {
-      return {
-        source: 'error',
-        passes: loadStoredPasses(),
-        connected: false,
-        message: `HTTP ${response.status}: Failed to reach /api/passes`
-      };
-    }
-
-    const data = await response.json();
-    const isCloudConnected = data.source === 'vercel_postgres' || data.source === 'vercel_kv';
-
-    if (data && Array.isArray(data.passes)) {
-      const normalized = normalizePasses(data.passes);
-      // Keep local storage fresh with cloud source
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-      } catch (e) {
-        // ignore
+    if (response.ok) {
+      const data = await response.json();
+      if (data && Array.isArray(data.passes) && data.passes.length > 0) {
+        const normalized = normalizePasses(data.passes);
+        // Sync to IndexedDB & localStorage
+        await idbSavePasses(normalized).catch(() => {});
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        } catch (e) {
+          // ignore localStorage quota
+        }
+        return {
+          source: data.source || 'server_database',
+          passes: normalized,
+          connected: true,
+          message: data.message || 'Connected to persistent database'
+        };
       }
+    }
+  } catch (err: any) {
+    console.warn('Backend server /api/passes not reachable yet, checking local databases:', err);
+  }
+
+  // 2. Check IndexedDB (has full resolution JPEGs from previous sessions)
+  try {
+    const idbPasses = await idbLoadPasses();
+    if (idbPasses && idbPasses.length > 0) {
+      const normalized = normalizePasses(idbPasses);
+      // Try to seed server database with existing IndexedDB passes in background
+      syncPassesToCloud(normalized).catch(() => {});
       return {
-        source: data.source,
+        source: 'indexeddb',
         passes: normalized,
-        connected: isCloudConnected,
-        message: data.message
+        connected: true,
+        message: 'Loaded from local persistent database with JPEGs'
       };
     }
-
-    return {
-      source: data.source || 'local_fallback',
-      passes: loadStoredPasses(),
-      connected: isCloudConnected,
-      message: data.message
-    };
-  } catch (err: any) {
-    console.warn('API /api/passes not reachable, running locally:', err);
-    return {
-      source: 'local_fallback',
-      passes: loadStoredPasses(),
-      connected: false,
-      message: err?.message || 'Network error'
-    };
+  } catch (idbErr) {
+    console.warn('IndexedDB check failed:', idbErr);
   }
+
+  // 3. Fallback to localStorage / initial passes
+  return {
+    source: 'local_fallback',
+    passes: loadStoredPasses(),
+    connected: false,
+    message: 'Local browser storage active'
+  };
 }
 
 /**
@@ -170,13 +210,13 @@ export async function syncPassesToCloud(passes: EntryPass[]): Promise<boolean> {
     });
 
     if (!response.ok) {
-      console.warn(`Cloud sync responded with HTTP ${response.status}`);
+      console.warn(`Database sync responded with HTTP ${response.status}`);
       return false;
     }
     const res = await response.json();
     return res.status === 'success';
   } catch (err) {
-    console.warn('Cloud sync could not reach /api/passes:', err);
+    console.warn('Database sync could not reach /api/passes:', err);
     return false;
   }
 }

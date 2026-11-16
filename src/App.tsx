@@ -437,8 +437,10 @@ export default function App() {
       fileUrl: string;
       uploadedAt: string;
       uploadedBy: string;
+      fileType?: string;
     }
   ) => {
+    const isDrive = doc.fileType === 'google_drive' || /^https?:\/\/(drive|docs)\.google\.com\//i.test(doc.fileUrl);
     setPasses((prev) =>
       prev.map((p) =>
         p.id === passId
@@ -446,7 +448,9 @@ export default function App() {
               ...p,
               approvedDocument: doc,
               cisfVerified: true,
-              lastGateActivity: `Approved pass document uploaded by ${doc.uploadedBy}`,
+              lastGateActivity: isDrive
+                ? `Google Drive scanned pass link attached by ${doc.uploadedBy}`
+                : `Approved pass document uploaded by ${doc.uploadedBy}`,
               updatedAt: new Date().toISOString().split('T')[0],
             }
           : p
@@ -457,7 +461,14 @@ export default function App() {
       setViewingPass((prev) => (prev ? { ...prev, approvedDocument: doc, cisfVerified: true } : null));
     }
 
-    showToast(`Approved signed pass attached. Download link is now active.`);
+    const isImage = !isDrive && (doc.fileUrl.startsWith('data:image/') || /\.(jpe?g|png|webp)$/i.test(doc.fileName));
+    showToast(
+      isDrive
+        ? `Google Drive link for "${doc.fileName}" saved to database.`
+        : isImage
+          ? `JPEG signed pass "${doc.fileName}" uploaded & stored in database.`
+          : `Approved pass document "${doc.fileName}" attached and saved to database.`
+    );
   };
 
   const handleSaveBill = (
@@ -483,7 +494,11 @@ export default function App() {
       setViewingPass((prev) => (prev ? { ...prev, billNumber, billDocument: billDoc } : null));
     }
 
-    showToast(`Tax invoice / bill document attached for ${billNumber}. Download link active.`);
+    const isImage = billDoc.fileUrl.startsWith('data:image/') || /\.(jpe?g|png|webp)$/i.test(billDoc.fileName);
+    showToast(isImage
+      ? `Tax Invoice JPEG #${billNumber} uploaded & stored in database.`
+      : `Tax invoice / bill document attached for ${billNumber}. Stored in database.`
+    );
   };
 
   const handleImportPasses = (newPasses: EntryPass[]) => {

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { EntryPass, ApprovedDocument } from '../types';
-import { X, UploadCloud, FileCheck, FileText, Receipt, CheckCircle2 } from 'lucide-react';
+import { processUploadedFile, ProcessedUploadFile } from '../utils/imageCompressor';
+import { X, UploadCloud, FileCheck, FileText, Receipt, CheckCircle2, Eye, Loader2 } from 'lucide-react';
 
 interface UploadBillModalProps {
   pass: EntryPass | null;
@@ -19,34 +20,38 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
   const [billNumber, setBillNumber] = useState(
     pass?.billNumber || pass?.challanInvoiceNumber || `AMN-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
   );
-  const [selectedFile, setSelectedFile] = useState<{
-    fileName: string;
-    fileSize: string;
-    fileUrl: string;
-  } | null>(pass?.billDocument ? {
-    fileName: pass.billDocument.fileName,
-    fileSize: pass.billDocument.fileSize || 'Attached',
-    fileUrl: pass.billDocument.fileUrl
-  } : null);
+  const [selectedFile, setSelectedFile] = useState<ProcessedUploadFile | null>(
+    pass?.billDocument
+      ? {
+          fileName: pass.billDocument.fileName,
+          fileSize: pass.billDocument.fileSize || 'Attached',
+          fileUrl: pass.billDocument.fileUrl,
+          fileType: pass.billDocument.fileType || 'image/jpeg',
+          isImage: pass.billDocument.fileUrl.startsWith('data:image/') || /\.(jpe?g|png|webp)$/i.test(pass.billDocument.fileName)
+        }
+      : null
+  );
   const [uploadedBy, setUploadedBy] = useState('Amnex Billing & NMDC Materials In-Charge');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   if (!isOpen || !pass) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const sizeStr = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-    const reader = new FileReader();
-    reader.onload = (uploadEvt) => {
-      setSelectedFile({
-        fileName: file.name,
-        fileSize: sizeStr,
-        fileUrl: uploadEvt.target?.result as string
-      });
-    };
-    reader.readAsDataURL(file);
+    setIsProcessing(true);
+    try {
+      const processed = await processUploadedFile(file);
+      setSelectedFile(processed);
+    } catch (err) {
+      console.error('Bill upload processing error:', err);
+      alert('Failed to process image/bill. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleAttachSampleBill = () => {
@@ -54,7 +59,9 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
     setSelectedFile({
       fileName: `Tax_Invoice_Bill_${safeBill.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
       fileSize: '1.4 MB',
-      fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+      fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+      fileType: 'application/pdf',
+      isImage: false
     });
   };
 
@@ -67,7 +74,7 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
       fileUrl: selectedFile.fileUrl,
       uploadedAt: new Date().toLocaleString(),
       uploadedBy: uploadedBy.trim() || 'Billing Administrator',
-      fileType: 'application/pdf'
+      fileType: selectedFile.fileType || 'application/pdf'
     };
 
     onSaveBill(pass.id, billNumber.trim(), billDoc);
@@ -89,11 +96,9 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
               <Receipt className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-white">
-                Upload Material Bill & Tax Invoice
-              </h3>
-              <p className="text-xs text-slate-400">
-                Gate Pass: <span className="text-indigo-400 font-mono font-semibold">{pass.passNumber}</span>
+              <h2 className="text-base font-bold text-white">Upload Material Bill / Tax Invoice</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Pass #{pass.passNumber} • Consignment for {pass.departmentOrProject || 'C&IT'}
               </p>
             </div>
           </div>
@@ -105,33 +110,17 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
+        {/* Body Form */}
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Bill / Tax Invoice / Delivery Challan Number <span className="text-rose-500">*</span>
+              Consignment Bill / Tax Invoice / DC Number <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               value={billNumber}
               onChange={(e) => setBillNumber(e.target.value)}
-              placeholder="e.g., AMN-GST-INV-2025-0891 or DC-889"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 font-mono font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
-            />
-            <p className="text-[11px] text-slate-500 mt-1">
-              Reflects in BOQ reconciliation and NMDC Stores Acceptance.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Uploaded By Authority
-            </label>
-            <input
-              type="text"
-              value={uploadedBy}
-              onChange={(e) => setUploadedBy(e.target.value)}
-              placeholder="e.g. Amnex Billing & NMDC Materials In-Charge"
+              placeholder="e.g. AMN/INV/2025/089"
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
             />
           </div>
@@ -139,7 +128,7 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
           {/* File Upload Zone */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Attach Signed Bill / Invoice Document <span className="text-rose-500">*</span>
+              Attach Signed Bill / Invoice JPEG or PDF <span className="text-rose-500">*</span>
             </label>
             <input
               type="file"
@@ -149,28 +138,76 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
               className="hidden"
             />
 
-            {selectedFile ? (
+            {isProcessing ? (
+              <div className="p-8 bg-indigo-50/60 border border-indigo-200 rounded-xl text-center space-y-2">
+                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+                <p className="text-xs font-bold text-indigo-950">Processing & Optimizing Image...</p>
+                <p className="text-[11px] text-indigo-700">Optimizing for fast database upload</p>
+              </div>
+            ) : selectedFile ? (
               <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5" />
-                  </div>
+                  {selectedFile.isImage ? (
+                    <div 
+                      onClick={() => setPreviewOpen(true)}
+                      className="relative w-14 h-14 rounded-lg overflow-hidden border border-indigo-300 bg-white cursor-pointer group shrink-0 shadow-2xs"
+                      title="Click to preview full image"
+                    >
+                      <img 
+                        src={selectedFile.fileUrl} 
+                        alt="Bill Preview" 
+                        className="w-full h-full object-cover group-hover:scale-105 transition"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                        <Eye className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                  )}
+
                   <div>
-                    <span className="text-sm font-bold text-slate-900 block truncate max-w-[260px]">
-                      {selectedFile.fileName}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-bold text-slate-900 block truncate max-w-[220px]">
+                        {selectedFile.fileName}
+                      </span>
+                      {selectedFile.isImage && (
+                        <span className="px-1.5 py-0.2 text-[10px] font-bold bg-indigo-200 text-indigo-800 rounded">
+                          JPEG
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500 block mt-0.5">
+                      Size: <strong className="text-indigo-800">{selectedFile.fileSize}</strong>
                     </span>
-                    <span className="text-xs text-slate-500">
-                      Size: {selectedFile.fileSize}
+                    <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Ready to store in database
                     </span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-xs text-indigo-700 hover:text-indigo-900 font-semibold px-2.5 py-1 bg-white rounded-md border border-indigo-200 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
-                >
-                  Change
-                </button>
+                <div className="flex flex-col items-end gap-1">
+                  {selectedFile.isImage && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewOpen(true)}
+                      className="text-xs text-indigo-700 hover:text-indigo-900 font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Preview</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs text-indigo-700 hover:text-indigo-900 font-semibold px-2.5 py-1 bg-white rounded-md border border-indigo-200 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
+                  >
+                    Change
+                  </button>
+                </div>
               </div>
             ) : (
               <div
@@ -178,13 +215,13 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
                 className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-50/50 hover:bg-indigo-50/20"
               >
                 <UploadCloud className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs font-bold text-slate-700">Click to upload Bill PDF or Invoice Scan</p>
-                <p className="text-[11px] text-slate-500 mt-1">Supports PDF, PNG, JPG up to 25MB</p>
+                <p className="text-xs font-bold text-slate-700">Click to upload Bill JPEG or PDF Invoice Scan</p>
+                <p className="text-[11px] text-slate-500 mt-1">Supports JPEG, JPG, PNG photos or PDF</p>
               </div>
             )}
 
             {/* Quick Attach Sample Bill */}
-            {!selectedFile && (
+            {!selectedFile && !isProcessing && (
               <div className="mt-2 text-right">
                 <button
                   type="button"
@@ -197,10 +234,22 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
             )}
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Authorized Uploader
+            </label>
+            <input
+              type="text"
+              value={uploadedBy}
+              onChange={(e) => setUploadedBy(e.target.value)}
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden"
+            />
+          </div>
+
           {isSuccess && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2 font-medium">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Bill document attached and linked successfully!</span>
+              <span>Bill document and JPEG uploaded to database successfully!</span>
             </div>
           )}
         </div>
@@ -216,14 +265,44 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
           <button
             id="btn-confirm-save-bill"
             onClick={handleSave}
-            disabled={!selectedFile || !billNumber.trim()}
+            disabled={!selectedFile || !billNumber.trim() || isProcessing}
             className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer"
           >
             <FileCheck className="w-4 h-4" />
-            <span>Save & Link Bill</span>
+            <span>Save & Upload to Database</span>
           </button>
         </div>
       </div>
+
+      {/* Lightbox Preview Modal */}
+      {previewOpen && selectedFile && selectedFile.isImage && (
+        <div 
+          className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs"
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden p-2 border border-slate-700 shadow-2xl flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between text-white p-3 border-b border-slate-800">
+              <span className="text-xs font-bold truncate max-w-md">{selectedFile.fileName}</span>
+              <button 
+                onClick={() => setPreviewOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-2 overflow-auto max-h-[75vh] flex items-center justify-center">
+              <img 
+                src={selectedFile.fileUrl} 
+                alt="Bill Document Preview" 
+                className="max-h-[70vh] w-auto object-contain rounded-lg shadow-md"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

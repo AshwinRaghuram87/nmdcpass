@@ -72,8 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onRefreshCloud}
               title={
                 cloudStatus.connected 
-                  ? `Connected to Neon Postgres (${cloudStatus.source}). Click to re-sync.` 
-                  : 'Running in Local Cache mode. Click to check Neon Postgres connection.'
+                  ? `Connected to Database (${cloudStatus.source}). Click to re-sync.` 
+                  : 'Running in Local/Cache mode. Click to check database connection.'
               }
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer border ${
                 cloudStatus.connected
@@ -92,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {cloudStatus.loading 
                   ? 'Syncing...' 
                   : cloudStatus.connected 
-                    ? 'Cloud DB Active (Neon)' 
+                    ? 'Database: Connected' 
                     : 'Local Cache'}
               </span>
             </button>

@@ -66,3 +66,90 @@ export function formatGatePassNumber(passNumber?: string): string {
 
   return trimmed;
 }
+
+/**
+ * Checks whether an attached document is a Google Drive link
+ */
+export function isGoogleDriveDoc(url?: string, fileType?: string): boolean {
+  if (fileType === 'google_drive') return true;
+  if (!url) return false;
+  return /^https?:\/\/(drive|docs)\.google\.com\//i.test(url.trim());
+}
+
+/**
+ * Checks whether a document URL is an external web link rather than an embedded data URL
+ */
+export function isExternalDocUrl(url?: string): boolean {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url.trim());
+}
+
+/**
+ * Validates and normalizes a pasted Google Drive (or external) URL for scanned passes
+ */
+export function validateGoogleDriveLink(rawUrl: string): {
+  valid: boolean;
+  normalizedUrl: string;
+  isGoogleDrive: boolean;
+  error?: string;
+} {
+  let trimmed = rawUrl.trim();
+  if (!trimmed) {
+    return { valid: false, normalizedUrl: '', isGoogleDrive: false, error: 'Please paste a Google Drive link.' };
+  }
+
+  if (/^(drive|docs)\.google\.com\//i.test(trimmed)) {
+    trimmed = `https://${trimmed}`;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return {
+        valid: false,
+        normalizedUrl: trimmed,
+        isGoogleDrive: false,
+        error: 'Link must start with https:// or http://'
+      };
+    }
+
+    const isGoogleDrive = /(^|\.)(drive|docs)\.google\.com$/i.test(parsed.hostname);
+    return {
+      valid: true,
+      normalizedUrl: parsed.toString(),
+      isGoogleDrive
+    };
+  } catch {
+    return {
+      valid: false,
+      normalizedUrl: trimmed,
+      isGoogleDrive: false,
+      error: 'Please enter a valid URL (e.g. https://drive.google.com/file/d/...)'
+    };
+  }
+}
+
+/**
+ * Extracts a direct download URL if the link is a standard Google Drive file share URL
+ */
+export function getGoogleDriveDirectDownloadUrl(url?: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+
+  // Matches /file/d/{FILE_ID}/...
+  const filePathMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i);
+  if (filePathMatch && filePathMatch[1]) {
+    return `https://drive.google.com/uc?export=download&id=${filePathMatch[1]}`;
+  }
+
+  // Matches ?id={FILE_ID} (excluding folders)
+  if (!/\/folders\//i.test(trimmed)) {
+    const idParamMatch = trimmed.match(/drive\.google\.com\/.*[?&]id=([a-zA-Z0-9_-]+)/i);
+    if (idParamMatch && idParamMatch[1]) {
+      return `https://drive.google.com/uc?export=download&id=${idParamMatch[1]}`;
+    }
+  }
+
+  return null;
+}
+

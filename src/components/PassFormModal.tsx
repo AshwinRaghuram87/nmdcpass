@@ -12,7 +12,7 @@ import {
   DESIGNATED_GATES,
   DesignatedGate
 } from '../types';
-import { getNextPassNumber } from '../utils/passUtils';
+import { getNextPassNumber, isGoogleDriveDoc, validateGoogleDriveLink } from '../utils/passUtils';
 import { MASTER_BOQ_ITEMS } from '../utils/boqData';
 import { 
   X, 
@@ -32,8 +32,15 @@ import {
   Layers,
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye,
+  Loader2,
+  Link2,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
+import { processUploadedFile } from '../utils/imageCompressor';
 
 interface PassFormModalProps {
   pass: EntryPass | null; // null for create, object for edit
@@ -147,6 +154,24 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   const [approvedDocFile, setApprovedDocFile] = useState<ApprovedDocument | null>(
     pass?.approvedDocument || null
   );
+  const [docAttachMode, setDocAttachMode] = useState<'file' | 'drive'>(
+    pass?.approvedDocument && isGoogleDriveDoc(pass.approvedDocument.fileUrl, pass.approvedDocument.fileType)
+      ? 'drive'
+      : 'file'
+  );
+  const [driveUrlInput, setDriveUrlInput] = useState(
+    pass?.approvedDocument && isGoogleDriveDoc(pass.approvedDocument.fileUrl, pass.approvedDocument.fileType)
+      ? pass.approvedDocument.fileUrl
+      : ''
+  );
+  const [driveLabelInput, setDriveLabelInput] = useState(
+    pass?.approvedDocument && isGoogleDriveDoc(pass.approvedDocument.fileUrl, pass.approvedDocument.fileType)
+      ? pass.approvedDocument.fileName
+      : ''
+  );
+  const [driveUrlError, setDriveUrlError] = useState<string | null>(null);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [isUploadingBill, setIsUploadingBill] = useState(false);
 
   // Official Standard NMDC Print Form Fields
   const [contractorFirm, setContractorFirm] = useState(
@@ -188,6 +213,17 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
         setVehicleNumber(pass.vehicleNumber || '');
         setVehicleType(pass.vehicleType || 'Commercial / Utility Van');
         setRecommendedBy(pass.recommendedBy || 'Mr. AVL Ramakrishna, Dy. GM( C&IT) , Engineer-in-Charge');
+        setApprovedDocFile(pass.approvedDocument || null);
+        if (pass.approvedDocument && isGoogleDriveDoc(pass.approvedDocument.fileUrl, pass.approvedDocument.fileType)) {
+          setDocAttachMode('drive');
+          setDriveUrlInput(pass.approvedDocument.fileUrl);
+          setDriveLabelInput(pass.approvedDocument.fileName || '');
+        } else {
+          setDocAttachMode('file');
+          setDriveUrlInput('');
+          setDriveLabelInput('');
+        }
+        setDriveUrlError(null);
         if (pass.employees && pass.employees.length > 0) {
           setEmployees(pass.employees);
         } else if (pass.passHolderName) {
@@ -209,6 +245,11 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
       } else {
         // Generating new pass starting from NMDC/C&IT/15
         setPassNumber(getNextPassNumber(existingPasses));
+        setApprovedDocFile(null);
+        setDocAttachMode('file');
+        setDriveUrlInput('');
+        setDriveLabelInput('');
+        setDriveUrlError(null);
       }
     }
   }, [isOpen, pass, existingPasses]);
@@ -406,40 +447,50 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   };
 
   // File upload handlers
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const sizeStr = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-    const reader = new FileReader();
-    reader.onload = (uploadEvt) => {
+    setIsUploadingDoc(true);
+    try {
+      const processed = await processUploadedFile(file);
       setApprovedDocFile({
-        fileName: file.name,
-        fileSize: sizeStr,
-        fileUrl: uploadEvt.target?.result as string,
+        fileName: processed.fileName,
+        fileSize: processed.fileSize,
+        fileUrl: processed.fileUrl,
         uploadedAt: new Date().toLocaleString(),
-        uploadedBy: 'NMDC Security Cell Incharge'
+        uploadedBy: 'NMDC Security Cell Incharge',
+        fileType: processed.fileType
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Failed to process approved pass file:', err);
+      alert('Could not process image/file. Please try again.');
+    } finally {
+      setIsUploadingDoc(false);
+    }
   };
 
-  const handleBillFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBillFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const sizeStr = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-    const reader = new FileReader();
-    reader.onload = (uploadEvt) => {
+    setIsUploadingBill(true);
+    try {
+      const processed = await processUploadedFile(file);
       setBillDocument({
-        fileName: file.name,
-        fileSize: sizeStr,
-        fileUrl: uploadEvt.target?.result as string,
+        fileName: processed.fileName,
+        fileSize: processed.fileSize,
+        fileUrl: processed.fileUrl,
         uploadedAt: new Date().toLocaleString(),
-        uploadedBy: 'Amnex Billing Admin'
+        uploadedBy: 'Amnex Billing Admin',
+        fileType: processed.fileType
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Failed to process bill file:', err);
+      alert('Could not process bill image/file. Please try again.');
+    } finally {
+      setIsUploadingBill(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -454,6 +505,25 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
       validityStatus = 'Expired';
     } else if (diffDays <= 5) {
       validityStatus = 'Expiring Soon';
+    }
+
+    let finalApprovedDoc = approvedDocFile || undefined;
+    if (docAttachMode === 'drive' && driveUrlInput.trim()) {
+      const validation = validateGoogleDriveLink(driveUrlInput);
+      if (!validation.valid) {
+        setDriveUrlError(validation.error || 'Please enter a valid Google Drive link.');
+        return;
+      }
+      finalApprovedDoc = {
+        fileName: driveLabelInput.trim() || `Scanned_Pass_${passNumber.replace(/[^a-zA-Z0-9]/g, '_')}_Drive`,
+        fileSize: validation.isGoogleDrive ? 'Google Drive' : 'External Link',
+        fileUrl: validation.normalizedUrl,
+        uploadedAt: approvedDocFile?.fileUrl === validation.normalizedUrl
+          ? approvedDocFile.uploadedAt
+          : new Date().toLocaleString(),
+        uploadedBy: approvedDocFile?.uploadedBy || 'NMDC Security Cell Incharge',
+        fileType: 'google_drive'
+      };
     }
 
     const payload: Partial<EntryPass> = {
@@ -477,7 +547,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
       passObtainedDate: procedureStage === 'Pass Obtained' ? (pass?.passObtainedDate || new Date().toISOString().split('T')[0]) : pass?.passObtainedDate,
       employees: employees.filter(e => e.name.trim() !== ''),
       followUpNotes,
-      approvedDocument: approvedDocFile || undefined,
+      approvedDocument: finalApprovedDoc,
       contractorFirm,
       nameOfWork,
       workOrderNo,
@@ -1432,14 +1502,48 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
             </div>
           </div>
 
-          {/* Approved Pass Document Upload Section */}
-          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
-            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
-              Upload Approved Pass Document (Official Signed & Received Copy)
-            </label>
-            <p className="text-[11px] text-slate-500 mb-3">
-              Attach the approved pass copy so officers and users can download it using the direct link.
-            </p>
+          {/* Approved Pass Document Upload / Google Drive Link Section */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Approved Scanned Pass (File Upload or Google Drive Link)
+                </label>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Upload the signed copy or paste a Google Drive link so officers and users can access it directly.
+                </p>
+              </div>
+
+              <div className="inline-flex p-0.5 bg-slate-200/80 rounded-lg border border-slate-300/70">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocAttachMode('file');
+                    setDriveUrlError(null);
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                    docAttachMode === 'file'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Upload File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocAttachMode('drive')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                    docAttachMode === 'drive'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Link2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Google Drive Link</span>
+                </button>
+              </div>
+            </div>
 
             <input
               type="file"
@@ -1449,7 +1553,94 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
               className="hidden"
             />
 
-            {approvedDocFile ? (
+            {docAttachMode === 'drive' ? (
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Paste Google Drive Link for Scanned Pass
+                  </label>
+                  <div className="relative">
+                    <Link2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="url"
+                      value={driveUrlInput}
+                      onChange={(e) => {
+                        setDriveUrlInput(e.target.value);
+                        setDriveUrlError(null);
+                      }}
+                      placeholder="https://drive.google.com/file/d/..."
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-emerald-500"
+                    />
+                  </div>
+                  {driveUrlError && (
+                    <p className="text-[11px] text-rose-600 mt-1 flex items-center gap-1 font-medium">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{driveUrlError}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Document Label (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={driveLabelInput}
+                      onChange={(e) => setDriveLabelInput(e.target.value)}
+                      placeholder={`Scanned_Pass_${passNumber.replace(/[^a-zA-Z0-9]/g, '_')}_Drive`}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-end justify-between gap-2">
+                    {driveUrlInput.trim() && validateGoogleDriveLink(driveUrlInput).valid ? (
+                      <div className="w-full flex items-center justify-between px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px]">
+                        <span className="text-emerald-800 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Link Ready</span>
+                        </span>
+                        <a
+                          href={validateGoogleDriveLink(driveUrlInput).normalizedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 hover:underline font-bold inline-flex items-center gap-0.5"
+                        >
+                          <span>Test</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 py-1.5">
+                        Supports Drive file or folder links
+                      </span>
+                    )}
+                    {(driveUrlInput || (approvedDocFile && isGoogleDriveDoc(approvedDocFile.fileUrl, approvedDocFile.fileType))) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDriveUrlInput('');
+                          setDriveLabelInput('');
+                          setDriveUrlError(null);
+                          if (approvedDocFile && isGoogleDriveDoc(approvedDocFile.fileUrl, approvedDocFile.fileType)) {
+                            setApprovedDocFile(null);
+                          }
+                        }}
+                        className="text-slate-400 hover:text-rose-600 p-1.5 cursor-pointer shrink-0"
+                        title="Clear Drive link"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : isUploadingDoc ? (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold text-blue-800">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Processing & optimizing uploaded file...</span>
+              </div>
+            ) : approvedDocFile && !isGoogleDriveDoc(approvedDocFile.fileUrl, approvedDocFile.fileType) ? (
               <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
                 <div className="flex items-center gap-2 truncate">
                   <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
