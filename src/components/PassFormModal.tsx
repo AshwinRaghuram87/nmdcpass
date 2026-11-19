@@ -14,6 +14,18 @@ import {
 } from '../types';
 import { getNextPassNumber, isGoogleDriveDoc, validateGoogleDriveLink } from '../utils/passUtils';
 import { MASTER_BOQ_ITEMS } from '../utils/boqData';
+import {
+  getMasterBoqConsumedQty,
+  getBoqDeliveredInPriorPasses,
+  getItemTotalBoqQty,
+  findMasterBoqItem
+} from '../utils/boqUtils';
+import {
+  findAnnexureEntriesForMaterialItem,
+  verifyItemMakeAndModel,
+  BoqAnnexureItem
+} from '../utils/boqAnnexureData';
+import { BoqMakeModelReviewModal } from './BoqMakeModelReviewModal';
 import { 
   X, 
   Plus, 
@@ -38,7 +50,8 @@ import {
   Link2,
   ExternalLink,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ClipboardCheck
 } from 'lucide-react';
 import { processUploadedFile } from '../utils/imageCompressor';
 
@@ -124,6 +137,10 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   const [challanInvoiceNumber, setChallanInvoiceNumber] = useState(
     pass?.challanInvoiceNumber || `AMN/DC/${new Date().getFullYear()}/001`
   );
+  const [deliveryChallanDriveUrl, setDeliveryChallanDriveUrl] = useState(
+    pass?.deliveryChallanDriveUrl || ''
+  );
+  const [challanDriveError, setChallanDriveError] = useState<string | null>(null);
   const [billNumber, setBillNumber] = useState(
     pass?.billNumber || ''
   );
@@ -139,8 +156,10 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
             id: `item-${Date.now()}`,
             itemName: '',
             specification: '',
-            isBoq: true,
-            boqItemNumber: 'BOQ-4.1',
+            isBoq: (pass?.materialCategory || 'Returnable') === 'Non-Returnable',
+            boqItemNumber: '',
+            boqNumber: '',
+            boqTotalQuantity: undefined,
             billNumber: '',
             quantity: 1,
             unit: 'Nos',
@@ -172,6 +191,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   const [driveUrlError, setDriveUrlError] = useState<string | null>(null);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [isUploadingBill, setIsUploadingBill] = useState(false);
+  const [reviewingItemIndex, setReviewingItemIndex] = useState<number | null>(null);
 
   // Official Standard NMDC Print Form Fields
   const [contractorFirm, setContractorFirm] = useState(
@@ -213,6 +233,18 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
         setVehicleNumber(pass.vehicleNumber || '');
         setVehicleType(pass.vehicleType || 'Commercial / Utility Van');
         setRecommendedBy(pass.recommendedBy || 'Mr. AVL Ramakrishna, Dy. GM( C&IT) , Engineer-in-Charge');
+        setMaterialCategory(pass.materialCategory || 'Returnable');
+        setExpectedReturnDate(
+          pass.expectedReturnDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        );
+        setChallanInvoiceNumber(pass.challanInvoiceNumber || `AMN/DC/${new Date().getFullYear()}/001`);
+        setDeliveryChallanDriveUrl(pass.deliveryChallanDriveUrl || '');
+        setChallanDriveError(null);
+        setBillNumber(pass.billNumber || '');
+        setBillDocument(pass.billDocument || null);
+        if (pass.materialItems && pass.materialItems.length > 0) {
+          setMaterialItems(pass.materialItems);
+        }
         setApprovedDocFile(pass.approvedDocument || null);
         if (pass.approvedDocument && isGoogleDriveDoc(pass.approvedDocument.fileUrl, pass.approvedDocument.fileType)) {
           setDocAttachMode('drive');
@@ -250,6 +282,8 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
         setDriveUrlInput('');
         setDriveLabelInput('');
         setDriveUrlError(null);
+        setDeliveryChallanDriveUrl('');
+        setChallanDriveError(null);
       }
     }
   }, [isOpen, pass, existingPasses]);
@@ -373,9 +407,10 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
         id: `mat-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         itemName: '',
         specification: '',
-        isBoq: true,
-        boqItemNumber: `BOQ-${materialItems.length + 1}.1`,
+        isBoq: materialCategory === 'Non-Returnable',
+        boqItemNumber: '',
         boqNumber: '',
+        boqTotalQuantity: undefined,
         oem: '',
         oemModel: '',
         billNumber: billNumber || challanInvoiceNumber || '',
@@ -390,7 +425,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   const handleUpdateMaterialItem = (
     index: number, 
     field: keyof MaterialItem, 
-    value: string | number | boolean
+    value: string | number | boolean | undefined
   ) => {
     const updated = [...materialItems];
     updated[index] = { ...updated[index], [field]: value };
@@ -403,28 +438,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
   };
 
   const getBoqConsumedQty = (itemNumber: number) => {
-    let consumed = 0;
-    existingPasses.forEach((p) => {
-      if (pass && p.id === pass.id) return;
-      if (p.materialItems) {
-        p.materialItems.forEach((m) => {
-          const matchesNum = m.boqItemNumber && (
-            m.boqItemNumber === `${itemNumber}` || 
-            m.boqItemNumber === `Item #${itemNumber}` ||
-            m.boqItemNumber === `BOQ-${itemNumber}` ||
-            m.boqItemNumber.includes(`-${itemNumber}`) ||
-            m.boqItemNumber.endsWith(` ${itemNumber}`) ||
-            m.boqItemNumber === `#${itemNumber}`
-          );
-          const boqObj = MASTER_BOQ_ITEMS.find(b => b.itemNumber === itemNumber);
-          const matchesDesc = m.itemName && boqObj && boqObj.description.toLowerCase() === m.itemName.toLowerCase();
-          if (matchesNum || matchesDesc) {
-            consumed += m.quantity || 0;
-          }
-        });
-      }
-    });
-    return consumed;
+    return getMasterBoqConsumedQty(itemNumber, existingPasses, pass?.id);
   };
 
   const handleSelectBoqItem = (idx: number, boqId: string) => {
@@ -435,13 +449,45 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
     const remaining = Math.max(0, foundBoq.totalQuantity - consumed);
 
     const updated = [...materialItems];
-    updated[idx] = {
+    const candidateItem: MaterialItem = {
       ...updated[idx],
+      isBoq: true,
       itemName: foundBoq.description,
       boqItemNumber: `Item #${foundBoq.itemNumber}`,
       boqNumber: `BOQ-${foundBoq.itemNumber}`,
+      boqTotalQuantity: foundBoq.totalQuantity,
       unit: foundBoq.unit,
       quantity: Math.min(updated[idx].quantity || 1, remaining > 0 ? remaining : 1),
+    };
+
+    const annexureMatches = findAnnexureEntriesForMaterialItem(candidateItem);
+    if (annexureMatches.length > 0) {
+      candidateItem.oem = annexureMatches[0].oemName;
+      candidateItem.oemModel = annexureMatches[0].modelName;
+    }
+
+    updated[idx] = candidateItem;
+    setMaterialItems(updated);
+  };
+
+  const handleApplyAnnexureMakeModel = (
+    idx: number,
+    oem: string,
+    modelName: string,
+    entry?: BoqAnnexureItem
+  ) => {
+    const updated = [...materialItems];
+    const current = updated[idx];
+    if (!current) return;
+    updated[idx] = {
+      ...current,
+      isBoq: true,
+      oem,
+      oemModel: modelName,
+      itemName: current.itemName.trim() ? current.itemName : (entry?.description || current.itemName),
+      boqItemNumber: current.boqItemNumber?.trim() ? current.boqItemNumber : (entry?.code || current.boqItemNumber),
+      boqTotalQuantity: current.boqTotalQuantity || entry?.totalQty,
+      unit: current.unit?.trim() ? current.unit : (entry?.uom || 'Nos'),
     };
     setMaterialItems(updated);
   };
@@ -563,10 +609,21 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
     }
 
     if (passType === 'Materials') {
+      let finalChallanDriveUrl: string | undefined = undefined;
+      if (deliveryChallanDriveUrl.trim()) {
+        const challanValidation = validateGoogleDriveLink(deliveryChallanDriveUrl);
+        if (!challanValidation.valid) {
+          setChallanDriveError(challanValidation.error || 'Please enter a valid Google Drive link for the Delivery Challan.');
+          return;
+        }
+        finalChallanDriveUrl = challanValidation.normalizedUrl;
+      }
+
       payload.vehicleNumber = vehicleNumber;
       payload.vehicleType = vehicleType;
       payload.materialCategory = materialCategory;
       payload.challanInvoiceNumber = challanInvoiceNumber;
+      payload.deliveryChallanDriveUrl = finalChallanDriveUrl;
       payload.expectedReturnDate = materialCategory === 'Returnable' ? expectedReturnDate : undefined;
       payload.materialReturnStatus = materialCategory === 'Returnable' 
         ? (pass?.materialReturnStatus || 'Pending Return')
@@ -1165,7 +1222,14 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setMaterialCategory('Non-Returnable')}
+                    onClick={() => {
+                      setMaterialCategory('Non-Returnable');
+                      if (!isEditing) {
+                        setMaterialItems((prev) =>
+                          prev.map((m) => (!m.itemName.trim() ? { ...m, isBoq: true } : m))
+                        );
+                      }
+                    }}
                     className={`px-3 py-1 rounded text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
                       materialCategory === 'Non-Returnable'
                         ? 'bg-emerald-600 text-white shadow-2xs'
@@ -1265,6 +1329,62 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                 )}
               </div>
 
+              {/* Delivery Challan Google Drive Link */}
+              <div className="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <span className="text-xs font-bold text-emerald-950">Delivery Challan Google Drive Link</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {deliveryChallanDriveUrl.trim() && validateGoogleDriveLink(deliveryChallanDriveUrl).valid && (
+                      <a
+                        href={validateGoogleDriveLink(deliveryChallanDriveUrl).normalizedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline bg-white px-2 py-0.5 rounded border border-emerald-200"
+                      >
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Test Drive Link</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {deliveryChallanDriveUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryChallanDriveUrl('');
+                          setChallanDriveError(null);
+                        }}
+                        className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer"
+                        title="Clear Delivery Challan Drive link"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="relative">
+                  <Link2 className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    value={deliveryChallanDriveUrl}
+                    onChange={(e) => {
+                      setDeliveryChallanDriveUrl(e.target.value);
+                      setChallanDriveError(null);
+                    }}
+                    placeholder="https://drive.google.com/file/d/... (Paste Google Drive link for Delivery Challan)"
+                    className="w-full pl-8 pr-3 py-2 bg-white border border-emerald-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-emerald-500"
+                  />
+                </div>
+                {challanDriveError && (
+                  <p className="text-[11px] text-rose-600 flex items-center gap-1 font-medium">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{challanDriveError}</span>
+                  </p>
+                )}
+              </div>
+
               {/* Bill Document Upload in Form */}
               <div className="bg-indigo-50/60 p-3 rounded-lg border border-indigo-200">
                 <div className="flex items-center justify-between mb-1.5">
@@ -1328,10 +1448,79 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                 </div>
 
                 <div className="space-y-3">
-                  {materialItems.map((itm, idx) => (
+                  {materialItems.map((itm, idx) => {
+                    const matchedMasterBoq = findMasterBoqItem(itm);
+                    const resolvedTotalBoq = getItemTotalBoqQty(itm);
+                    const priorDelivered = itm.isBoq
+                      ? getBoqDeliveredInPriorPasses(itm, existingPasses, pass).qty
+                      : 0;
+                    const presentQty = Number(itm.quantity) || 0;
+                    const pendingQty =
+                      resolvedTotalBoq !== null
+                        ? Math.max(0, resolvedTotalBoq - (priorDelivered + presentQty))
+                        : null;
+                    const makeModelCheck = itm.isBoq ? verifyItemMakeAndModel(itm) : null;
+
+                    return (
                     <div key={itm.id || idx} className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-700">Item #{idx + 1}</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] font-bold text-slate-700">Item #{idx + 1}</span>
+                          <div className="inline-flex rounded-md border border-slate-200 bg-slate-100 p-0.5 text-[10px] font-bold">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateMaterialItem(idx, 'isBoq', true)}
+                              className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                                itm.isBoq
+                                  ? 'bg-indigo-600 text-white shadow-2xs'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              BOQ Item
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateMaterialItem(idx, 'isBoq', false)}
+                              className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                                !itm.isBoq
+                                  ? 'bg-slate-700 text-white shadow-2xs'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              Non-BOQ
+                            </button>
+                          </div>
+
+                          {itm.isBoq && (
+                            <button
+                              type="button"
+                              onClick={() => setReviewingItemIndex(idx)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-600 text-indigo-800 hover:text-white border border-indigo-200 hover:border-indigo-600 text-[10px] font-bold transition cursor-pointer"
+                              title="Open NMDC-UMLMSS Unpriced BoQ (Annexure 2) to verify OEM Make & Model"
+                            >
+                              <ClipboardCheck className="w-3 h-3" />
+                              <span>Review Make &amp; Model</span>
+                            </button>
+                          )}
+
+                          {makeModelCheck && itm.itemName.trim() && (
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                makeModelCheck.status === 'verified'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : makeModelCheck.status === 'mismatch'
+                                    ? 'bg-rose-50 text-rose-800 border-rose-200'
+                                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}
+                            >
+                              {makeModelCheck.status === 'verified'
+                                ? '✓ Make/Model Verified'
+                                : makeModelCheck.status === 'mismatch'
+                                  ? '⚠ Make/Model Mismatch'
+                                  : 'Verify Make/Model'}
+                            </span>
+                          )}
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveMaterialItem(idx)}
@@ -1342,28 +1531,58 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                         </button>
                       </div>
 
-                      {/* Master BOQ Item Dropdown (Only for Non-Returnable Material Passes) */}
-                      {passType === 'Materials' && materialCategory === 'Non-Returnable' && (
-                        <div className="bg-indigo-50/60 p-2 rounded-lg border border-indigo-200 space-y-1">
+                      {/* Master BOQ Item Dropdown (Shown whenever item is marked as BOQ) */}
+                      {passType === 'Materials' && itm.isBoq && (
+                        <div className="bg-indigo-50/60 p-2 rounded-lg border border-indigo-200 space-y-1.5">
                           <label className="block text-[11px] font-bold text-indigo-900">
-                            Select from Master BOQ List (Optional: auto-fills item details & tracks remaining quantities, or type manually below):
+                            Select from Master BOQ List (Auto-fills total BOQ quantity &amp; tracks delivered / pending quantities):
                           </label>
                           <select
                             onChange={(e) => handleSelectBoqItem(idx, e.target.value)}
-                            defaultValue=""
+                            value={matchedMasterBoq?.id || ''}
                             className="w-full px-2.5 py-1.5 bg-white border border-indigo-300 rounded text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-indigo-600 cursor-pointer"
                           >
-                            <option value="" disabled>-- Select BOQ Item or type manually below --</option>
+                            <option value="">-- Select Master BOQ Item or enter custom BOQ item below --</option>
                             {MASTER_BOQ_ITEMS.map((boq) => {
                               const consumed = getBoqConsumedQty(boq.itemNumber);
                               const remaining = Math.max(0, boq.totalQuantity - consumed);
                               return (
                                 <option key={boq.id} value={boq.id}>
-                                  #{boq.itemNumber}: {boq.description} (Total: {boq.totalQuantity} {boq.unit}, Remaining: {remaining})
+                                  #{boq.itemNumber}: {boq.description} (Total: {boq.totalQuantity} {boq.unit}, Delivered: {consumed}, Pending: {remaining})
                                 </option>
                               );
                             })}
                           </select>
+
+                          {/* Live BOQ Delivery Preview */}
+                          {(itm.itemName.trim() || resolvedTotalBoq !== null) && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 text-[10px]">
+                              <div className="bg-white border border-slate-200 rounded px-2 py-1">
+                                <span className="text-slate-500 block">Total BOQ Qty</span>
+                                <span className="font-extrabold text-slate-900">
+                                  {resolvedTotalBoq !== null ? `${resolvedTotalBoq} ${itm.unit}` : 'Not Set'}
+                                </span>
+                              </div>
+                              <div className="bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                                <span className="text-blue-700 block">Present Delivering</span>
+                                <span className="font-extrabold text-blue-900">
+                                  {presentQty} {itm.unit}
+                                </span>
+                              </div>
+                              <div className="bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+                                <span className="text-emerald-700 block">Already Delivered</span>
+                                <span className="font-extrabold text-emerald-900">
+                                  {priorDelivered} {itm.unit}
+                                </span>
+                              </div>
+                              <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                                <span className="text-amber-800 block">Pending Delivery</span>
+                                <span className="font-extrabold text-amber-900">
+                                  {pendingQty !== null ? `${pendingQty} ${itm.unit}` : '—'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1384,10 +1603,12 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                         <div className="sm:col-span-3 flex gap-1">
                           <input
                             type="number"
+                            min={1}
                             placeholder="Qty"
                             value={itm.quantity}
-                            onChange={(e) => handleUpdateMaterialItem(idx, 'quantity', parseInt(e.target.value) || 1)}
-                            className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs text-center"
+                            onChange={(e) => handleUpdateMaterialItem(idx, 'quantity', Math.max(0, parseInt(e.target.value) || 0))}
+                            className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs text-center font-semibold"
+                            title="Present quantity delivering on this pass"
                           />
                           <input
                             type="text"
@@ -1411,7 +1632,7 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                       </div>
 
                       {/* BOQ & OEM Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <div className={`grid grid-cols-1 gap-2 ${itm.isBoq ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}>
                         <input
                           type="text"
                           placeholder="BOQ Number"
@@ -1426,6 +1647,24 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                           onChange={(e) => handleUpdateMaterialItem(idx, 'boqItemNumber', e.target.value)}
                           className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-mono"
                         />
+                        {itm.isBoq && (
+                          <input
+                            type="number"
+                            min={1}
+                            placeholder="Total BOQ Qty"
+                            value={itm.boqTotalQuantity ?? matchedMasterBoq?.totalQuantity ?? ''}
+                            onChange={(e) => {
+                              const parsed = parseInt(e.target.value, 10);
+                              handleUpdateMaterialItem(
+                                idx,
+                                'boqTotalQuantity',
+                                Number.isNaN(parsed) ? undefined : Math.max(0, parsed)
+                              );
+                            }}
+                            title="Total sanctioned BOQ quantity for this item"
+                            className="w-full px-2.5 py-1.5 bg-indigo-50/50 border border-indigo-200 rounded text-xs font-bold text-indigo-950"
+                          />
+                        )}
                         <input
                           type="text"
                           placeholder="OEM (Manufacturer)"
@@ -1467,7 +1706,8 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1801,6 +2041,18 @@ export const PassFormModal: React.FC<PassFormModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Inline BOQ Make & Model Review Modal (Annexure 2) */}
+      {reviewingItemIndex !== null && materialItems[reviewingItemIndex] && (
+        <BoqMakeModelReviewModal
+          isOpen={true}
+          focusedItem={materialItems[reviewingItemIndex]}
+          onClose={() => setReviewingItemIndex(null)}
+          onApplyMakeModel={(oem, modelName, entry) =>
+            handleApplyAnnexureMakeModel(reviewingItemIndex, oem, modelName, entry)
+          }
+        />
+      )}
     </div>
   );
 };

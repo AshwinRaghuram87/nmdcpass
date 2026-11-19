@@ -44,7 +44,8 @@ import {
   EyeOff,
   Archive,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  ClipboardCheck
 } from 'lucide-react';
 import {
   isGoogleDriveDoc,
@@ -52,9 +53,12 @@ import {
   isPassHiddenByDefault,
   ARCHIVED_PASS_MAX_NUMBER
 } from '../utils/passUtils';
+import { computePassBoqSummary } from '../utils/boqUtils';
+import { BoqDeliveryTrackerBar } from './BoqDeliveryTrackerBar';
 
 interface PassTableProps {
   passes: EntryPass[];
+  allPasses?: EntryPass[];
   userRole: UserRole;
   onViewPass: (pass: EntryPass) => void;
   onEditPass: (pass: EntryPass) => void;
@@ -65,6 +69,7 @@ interface PassTableProps {
   onToggleGateStatus: (pass: EntryPass) => void;
   onToggleMaterialReturn: (pass: EntryPass) => void;
   onAdvanceProcedureStage?: (pass: EntryPass, nextStage: ProcedureStage) => void;
+  onReviewBoqPass?: (pass: EntryPass) => void;
   onReorderPasses?: (sourcePassId: string, targetPassId: string) => void;
   hiddenArchivedCount?: number;
   showArchivedPasses?: boolean;
@@ -76,6 +81,7 @@ interface PassTableProps {
 
 export const PassTable: React.FC<PassTableProps> = ({
   passes,
+  allPasses,
   userRole,
   onViewPass,
   onEditPass,
@@ -86,6 +92,7 @@ export const PassTable: React.FC<PassTableProps> = ({
   onToggleGateStatus,
   onToggleMaterialReturn,
   onAdvanceProcedureStage,
+  onReviewBoqPass,
   onReorderPasses,
   hiddenArchivedCount = 0,
   showArchivedPasses = false,
@@ -520,6 +527,7 @@ export const PassTable: React.FC<PassTableProps> = ({
             {passes.map((pass, index) => {
               const isMaterial = pass.passType === 'Materials';
               const isExpanded = expandedPassId === pass.id;
+              const boqSummary = computePassBoqSummary(pass, allPasses || passes);
               const isArchivedRange = isPassHiddenByDefault(pass.passNumber);
               const isBeingDragged = draggedPassId === pass.id;
               const isDropTarget = dragOverPassId === pass.id && draggedPassId !== null && draggedPassId !== pass.id;
@@ -730,6 +738,13 @@ export const PassTable: React.FC<PassTableProps> = ({
                               </span>
                             )}
 
+                            {boqSummary && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                <Layers className="w-2.5 h-2.5" />
+                                <span>BOQ Pass</span>
+                              </span>
+                            )}
+
                             {pass.materialCategory === 'Returnable' && pass.expectedReturnDate && (
                               <span className="text-[10px] text-amber-900 font-semibold block">
                                 Due: {pass.expectedReturnDate}
@@ -760,8 +775,23 @@ export const PassTable: React.FC<PassTableProps> = ({
                             </div>
                           )}
 
-                          {/* Bill Document & Actions */}
+                          {/* Bill Document, Delivery Challan Drive Link & Actions */}
                           <div className="pt-1 flex flex-wrap items-center gap-1.5">
+                            {pass.deliveryChallanDriveUrl && (
+                              <a
+                                id={`btn-open-challan-drive-${pass.id}`}
+                                href={pass.deliveryChallanDriveUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={`Open Delivery Challan in Google Drive: ${pass.deliveryChallanDriveUrl}`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold shadow-2xs transition cursor-pointer"
+                              >
+                                <Link2 className="w-3 h-3" />
+                                <span>Challan Drive</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+
                             {pass.billDocument ? (
                               <button
                                 onClick={() => triggerDownload(pass.billDocument!.fileUrl, pass.billDocument!.fileName)}
@@ -776,14 +806,27 @@ export const PassTable: React.FC<PassTableProps> = ({
                                 <button
                                   onClick={() => onUploadBillClick && onUploadBillClick(pass)}
                                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border border-slate-200 rounded text-[10px] font-medium transition cursor-pointer"
-                                  title="Upload Bill / Invoice copy"
+                                  title="Upload Bill or paste Delivery Challan Google Drive link"
                                 >
                                   <UploadCloud className="w-3 h-3" />
-                                  <span>Upload Bill</span>
+                                  <span>{pass.deliveryChallanDriveUrl ? 'Upload Bill' : 'Bill / Challan Link'}</span>
                                 </button>
                               ) : (
-                                <span className="text-[10px] text-slate-400 italic">Bill copy pending</span>
+                                !pass.deliveryChallanDriveUrl && (
+                                  <span className="text-[10px] text-slate-400 italic">Bill copy pending</span>
+                                )
                               )
+                            )}
+
+                            {isAdmin && pass.billDocument && !pass.deliveryChallanDriveUrl && (
+                              <button
+                                onClick={() => onUploadBillClick && onUploadBillClick(pass)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[10px] font-semibold transition cursor-pointer"
+                                title="Paste Delivery Challan Google Drive link"
+                              >
+                                <Link2 className="w-2.5 h-2.5" />
+                                <span>+ Challan Link</span>
+                              </button>
                             )}
 
                             {/* Expand Items Drawer Toggle */}
@@ -919,6 +962,20 @@ export const PassTable: React.FC<PassTableProps> = ({
                     {/* Action Buttons */}
                     <td className="py-3 px-3.5 align-top text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
+                        {/* BOQ Make & Model Review Button (Shown whenever this is a BOQ pass) */}
+                        {boqSummary && onReviewBoqPass && (
+                          <button
+                            id={`btn-review-boq-${pass.id}`}
+                            type="button"
+                            onClick={() => onReviewBoqPass(pass)}
+                            title="Review BOQ Make & Model against NMDC-UMLMSS Unpriced BoQ (Annexure 2)"
+                            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-indigo-700 hover:text-white bg-indigo-50 hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 rounded-md transition cursor-pointer mr-0.5"
+                          >
+                            <ClipboardCheck className="w-3.5 h-3.5" />
+                            <span>Review</span>
+                          </button>
+                        )}
+
                         {/* View Button - Both Roles */}
                         <button
                           id={`btn-view-${pass.id}`}
@@ -969,6 +1026,24 @@ export const PassTable: React.FC<PassTableProps> = ({
                     </td>
                   </tr>
 
+                  {/* BOQ Pass Delivery Tracking Bar (Always shown directly below BOQ passes) */}
+                  {boqSummary && (
+                    <tr
+                      id={`boq-summary-row-${pass.id}`}
+                      className="bg-indigo-50/35 border-b border-indigo-200/80"
+                    >
+                      <td colSpan={10} className="px-3.5 py-2.5">
+                        <BoqDeliveryTrackerBar
+                          summary={boqSummary}
+                          passNumber={pass.passNumber}
+                          pass={pass}
+                          onReviewMakeModel={onReviewBoqPass ? () => onReviewBoqPass(pass) : undefined}
+                          compact
+                        />
+                      </td>
+                    </tr>
+                  )}
+
                   {/* Expanded Material Items Drawer */}
                   {isExpanded && isMaterial && pass.materialItems && (
                     <tr className="bg-slate-50/80 border-b border-slate-200">
@@ -981,9 +1056,23 @@ export const PassTable: React.FC<PassTableProps> = ({
                                 Detailed Items List for {pass.passNumber} ({pass.materialCategory === 'Returnable' ? 'RGP' : 'NRGP'})
                               </span>
                             </div>
-                            <span className="text-[11px] text-slate-500">
-                              Challan / Bill Ref: <strong>{pass.billNumber || pass.challanInvoiceNumber || 'N/A'}</strong>
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                              <span>
+                                Challan / Bill Ref: <strong>{pass.billNumber || pass.challanInvoiceNumber || 'N/A'}</strong>
+                              </span>
+                              {pass.deliveryChallanDriveUrl && (
+                                <a
+                                  href={pass.deliveryChallanDriveUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold transition"
+                                >
+                                  <Link2 className="w-3 h-3" />
+                                  <span>Open Challan Drive</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                            </div>
                           </div>
 
                           <table className="w-full text-left text-xs border border-slate-100 rounded overflow-hidden">

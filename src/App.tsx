@@ -14,6 +14,7 @@ import { UploadBillModal } from './components/UploadBillModal';
 import { PrintablePassModal } from './components/PrintablePassModal';
 import { PassReportModal } from './components/PassReportModal';
 import { RoleSwitcherModal } from './components/RoleSwitcherModal';
+import { BoqMakeModelReviewModal } from './components/BoqMakeModelReviewModal';
 import { getActiveUserProfile, setActiveUserProfile } from './utils/userProfiles';
 import { getNextPassNumber, isPassHiddenByDefault } from './utils/passUtils';
 import { ShieldCheck, AlertTriangle, CheckCircle, Package, Receipt, RotateCcw } from 'lucide-react';
@@ -104,6 +105,7 @@ export default function App() {
   const [uploadBillPass, setUploadBillPass] = useState<EntryPass | null>(null);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reviewingBoqPass, setReviewingBoqPass] = useState<EntryPass | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
   // Flash notification helper
@@ -321,6 +323,7 @@ export default function App() {
         expectedReturnDate: passData.expectedReturnDate,
         materialReturnStatus: passData.materialReturnStatus,
         challanInvoiceNumber: passData.challanInvoiceNumber,
+        deliveryChallanDriveUrl: passData.deliveryChallanDriveUrl,
         billNumber: passData.billNumber,
         billDocument: passData.billDocument,
         approvedDocument: passData.approvedDocument,
@@ -503,16 +506,21 @@ export default function App() {
   const handleSaveBill = (
     passId: string,
     billNumber: string,
-    billDoc: ApprovedDocument
+    billDoc?: ApprovedDocument,
+    deliveryChallanDriveUrl?: string
   ) => {
     setPasses((prev) =>
       prev.map((p) =>
         p.id === passId
           ? {
               ...p,
-              billNumber,
-              billDocument: billDoc,
-              lastGateActivity: `Bill / Invoice ${billNumber} attached by ${billDoc.uploadedBy}`,
+              billNumber: billNumber || p.billNumber,
+              billDocument: billDoc || p.billDocument,
+              deliveryChallanDriveUrl: deliveryChallanDriveUrl || undefined,
+              lastGateActivity:
+                deliveryChallanDriveUrl && !billDoc
+                  ? `Delivery Challan Drive link attached`
+                  : `Bill / Challan ${billNumber || ''} attached by ${billDoc?.uploadedBy || 'Admin'}`,
               updatedAt: new Date().toISOString().split('T')[0],
             }
           : p
@@ -520,13 +528,27 @@ export default function App() {
     );
 
     if (viewingPass && viewingPass.id === passId) {
-      setViewingPass((prev) => (prev ? { ...prev, billNumber, billDocument: billDoc } : null));
+      setViewingPass((prev) =>
+        prev
+          ? {
+              ...prev,
+              billNumber: billNumber || prev.billNumber,
+              billDocument: billDoc || prev.billDocument,
+              deliveryChallanDriveUrl: deliveryChallanDriveUrl || undefined,
+            }
+          : null
+      );
     }
 
-    const isImage = billDoc.fileUrl.startsWith('data:image/') || /\.(jpe?g|png|webp)$/i.test(billDoc.fileName);
-    showToast(isImage
-      ? `Tax Invoice JPEG #${billNumber} uploaded & stored in database.`
-      : `Tax invoice / bill document attached for ${billNumber}. Stored in database.`
+    const isImage =
+      billDoc &&
+      (billDoc.fileUrl.startsWith('data:image/') || /\.(jpe?g|png|webp)$/i.test(billDoc.fileName));
+    showToast(
+      deliveryChallanDriveUrl && !billDoc
+        ? `Delivery Challan Google Drive link saved to database.`
+        : isImage
+          ? `Tax Invoice JPEG #${billNumber} & Challan details stored in database.`
+          : `Bill / Delivery Challan details saved to database.`
     );
   };
 
@@ -687,6 +709,7 @@ export default function App() {
         {/* Passes Table with RBAC, Drag-and-Drop Reordering, Download Links, BOQ Details and Bill Links */}
         <PassTable
           passes={displayedPasses}
+          allPasses={passes}
           userRole={currentProfile.role}
           onViewPass={(pass) => setViewingPass(pass)}
           onPrintPass={(pass) => setPrintingPass(pass)}
@@ -700,6 +723,7 @@ export default function App() {
           onToggleGateStatus={handleToggleGateStatus}
           onToggleMaterialReturn={handleToggleMaterialReturn}
           onAdvanceProcedureStage={handleAdvanceProcedureStage}
+          onReviewBoqPass={(pass) => setReviewingBoqPass(pass)}
           onReorderPasses={handleReorderPasses}
           hiddenArchivedCount={hiddenArchivedPasses.length}
           showArchivedPasses={showArchivedPasses}
@@ -741,6 +765,7 @@ export default function App() {
       {viewingPass && (
         <PassDetailModal
           pass={viewingPass}
+          allPasses={passes}
           userRole={currentProfile.role}
           onClose={() => setViewingPass(null)}
           onPrint={(pass) => {
@@ -761,6 +786,16 @@ export default function App() {
           onToggleGateStatus={handleToggleGateStatus}
           onToggleMaterialReturn={handleToggleMaterialReturn}
           onAdvanceProcedureStage={handleAdvanceProcedureStage}
+          onReviewBoqPass={(pass) => setReviewingBoqPass(pass)}
+        />
+      )}
+
+      {/* BOQ Make & Model Review Modal (Unpriced BoQ - Annexure 2) */}
+      {reviewingBoqPass && (
+        <BoqMakeModelReviewModal
+          isOpen={true}
+          pass={reviewingBoqPass}
+          onClose={() => setReviewingBoqPass(null)}
         />
       )}
 

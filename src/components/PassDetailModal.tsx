@@ -31,16 +31,21 @@ import {
   Eye,
   Image as ImageIcon,
   Link2,
-  ExternalLink
+  ExternalLink,
+  ClipboardCheck
 } from 'lucide-react';
 import {
   isGoogleDriveDoc,
   isExternalDocUrl,
   getGoogleDriveDirectDownloadUrl
 } from '../utils/passUtils';
+import { computePassBoqSummary, isBoqMaterialItem } from '../utils/boqUtils';
+import { verifyItemMakeAndModel } from '../utils/boqAnnexureData';
+import { BoqDeliveryTrackerBar } from './BoqDeliveryTrackerBar';
 
 interface PassDetailModalProps {
   pass: EntryPass | null;
+  allPasses?: EntryPass[];
   userRole: UserRole;
   onClose: () => void;
   onPrint: (pass: EntryPass) => void;
@@ -50,10 +55,12 @@ interface PassDetailModalProps {
   onToggleGateStatus: (pass: EntryPass) => void;
   onToggleMaterialReturn: (pass: EntryPass) => void;
   onAdvanceProcedureStage?: (pass: EntryPass, nextStage: ProcedureStage) => void;
+  onReviewBoqPass?: (pass: EntryPass) => void;
 }
 
 export const PassDetailModal: React.FC<PassDetailModalProps> = ({
   pass,
+  allPasses,
   userRole,
   onClose,
   onPrint,
@@ -62,12 +69,14 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
   onUploadBill,
   onToggleGateStatus,
   onToggleMaterialReturn,
-  onAdvanceProcedureStage
+  onAdvanceProcedureStage,
+  onReviewBoqPass
 }) => {
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
   if (!pass) return null;
   const isAdmin = userRole === 'admin';
+  const boqSummary = computePassBoqSummary(pass, allPasses || [pass]);
 
   const isImageDoc = (url?: string, name?: string) => {
     if (!url) return false;
@@ -450,6 +459,21 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                 <div>
                   <span className="text-slate-500 text-[11px] block">Delivery Challan / Invoice #:</span>
                   <span className="font-mono font-semibold text-slate-800">{pass.challanInvoiceNumber || 'AMN/CH-2025'}</span>
+                  {pass.deliveryChallanDriveUrl && (
+                    <div className="mt-1">
+                      <a
+                        href={pass.deliveryChallanDriveUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold shadow-2xs transition"
+                        title={`Open Delivery Challan in Google Drive: ${pass.deliveryChallanDriveUrl}`}
+                      >
+                        <Link2 className="w-3 h-3" />
+                        <span>Open Challan Drive</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
                 </div>
                 {pass.materialCategory === 'Returnable' ? (
                   <div>
@@ -477,13 +501,33 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                 )}
               </div>
 
+              {/* BOQ Delivery Tracking Summary (Total BOQ, Present Delivering, Already Delivered, Pending) */}
+              {boqSummary && (
+                <BoqDeliveryTrackerBar
+                  summary={boqSummary}
+                  passNumber={pass.passNumber}
+                  pass={pass}
+                  onReviewMakeModel={onReviewBoqPass ? () => onReviewBoqPass(pass) : undefined}
+                />
+              )}
+
               {/* Material Items List with BOQ & Bill Fields */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Materials Inventory & BOQ Item Breakdown ({pass.materialItems?.length || 0} Items)</span>
+                    <span>Materials Inventory &amp; BOQ Item Breakdown ({pass.materialItems?.length || 0} Items)</span>
                   </h4>
+                  {boqSummary && onReviewBoqPass && (
+                    <button
+                      type="button"
+                      onClick={() => onReviewBoqPass(pass)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold shadow-2xs transition cursor-pointer"
+                    >
+                      <ClipboardCheck className="w-3.5 h-3.5" />
+                      <span>Review Make &amp; Model (Annexure 2)</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -491,7 +535,8 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-[11px] font-semibold text-slate-700">
                         <th className="py-2 px-3">Item Description</th>
-                        <th className="py-2 px-3">Quantity & Unit</th>
+                        <th className="py-2 px-3">Make &amp; Model</th>
+                        <th className="py-2 px-3">Quantity &amp; Unit</th>
                         <th className="py-2 px-3">Bill / Challan Number</th>
                         <th className="py-2 px-3">Serial No / Tag #</th>
                         <th className="py-2 px-3">Remarks</th>
@@ -499,12 +544,44 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       {pass.materialItems && pass.materialItems.length > 0 ? (
-                        pass.materialItems.map((item, idx) => (
+                        pass.materialItems.map((item, idx) => {
+                          const isBoq = isBoqMaterialItem(item, pass);
+                          const verification = isBoq ? verifyItemMakeAndModel(item) : null;
+                          return (
                           <tr key={item.id || idx} className="hover:bg-slate-50/70">
                             <td className="py-2 px-3 font-semibold text-slate-900">
                               {item.itemName}
                               {item.specification && (
                                 <span className="text-[11px] text-slate-500 font-normal block">{item.specification}</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-[11px]">
+                              {(item.oem || item.oemModel) ? (
+                                <div>
+                                  <span className="font-bold text-slate-800">{item.oem || '—'}</span>
+                                  {item.oemModel && (
+                                    <span className="block font-mono text-[10px] text-slate-600">{item.oemModel}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic">Not entered</span>
+                              )}
+                              {verification && (
+                                <span
+                                  className={`mt-0.5 inline-block text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                                    verification.status === 'verified'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : verification.status === 'mismatch'
+                                        ? 'bg-rose-100 text-rose-800'
+                                        : 'bg-amber-100 text-amber-800'
+                                  }`}
+                                >
+                                  {verification.status === 'verified'
+                                    ? '✓ Annexure 2 Match'
+                                    : verification.status === 'mismatch'
+                                      ? '⚠ Check Annexure 2'
+                                      : 'Verify Make/Model'}
+                                </span>
                               )}
                             </td>
                             <td className="py-2 px-3 font-semibold text-slate-800">
@@ -520,10 +597,11 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                               {item.remarks || '-'}
                             </td>
                           </tr>
-                        ))
+                          );
+                        })
                       ) : (
                         <tr>
-                          <td colSpan={5} className="py-3 px-3 text-center text-slate-400">
+                          <td colSpan={6} className="py-3 px-3 text-center text-slate-400">
                             No individual items listed.
                           </td>
                         </tr>
@@ -533,13 +611,13 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Uploaded Bill & Tax Invoice Box */}
-              <div className="border border-indigo-100 bg-indigo-50/40 rounded-xl p-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              {/* Uploaded Bill & Delivery Challan Drive Link Box */}
+              <div className="border border-indigo-100 bg-indigo-50/40 rounded-xl p-3.5 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Receipt className="w-4 h-4 text-indigo-600" />
                     <span className="font-bold text-xs text-indigo-950">
-                      Material Tax Invoice / Bill Document
+                      Material Tax Invoice / Bill &amp; Delivery Challan
                     </span>
                   </div>
 
@@ -550,10 +628,38 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
                     >
                       <UploadCloud className="w-3.5 h-3.5" />
-                      <span>{pass.billDocument ? 'Replace Bill' : 'Upload Bill'}</span>
+                      <span>{pass.billDocument || pass.deliveryChallanDriveUrl ? 'Update Bill / Challan' : 'Add Bill / Challan Link'}</span>
                     </button>
                   )}
                 </div>
+
+                {pass.deliveryChallanDriveUrl && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <Link2 className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-emerald-950 block">
+                          Delivery Challan — Google Drive Link
+                        </span>
+                        <span className="text-[11px] text-emerald-800 font-mono truncate block max-w-[300px]" title={pass.deliveryChallanDriveUrl}>
+                          {pass.challanInvoiceNumber ? `DC #${pass.challanInvoiceNumber} • ` : ''}
+                          {pass.deliveryChallanDriveUrl}
+                        </span>
+                      </div>
+                    </div>
+                    <a
+                      href={pass.deliveryChallanDriveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-bold shadow-2xs transition shrink-0"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open Challan</span>
+                    </a>
+                  </div>
+                )}
 
                 {pass.billDocument ? (
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-white border border-indigo-200 rounded-lg gap-2">

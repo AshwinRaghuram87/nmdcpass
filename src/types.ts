@@ -68,6 +68,7 @@ export interface MaterialItem {
   boqItemNumber?: string; // e.g. "BOQ-ITEM-4.1", "BOQ-ELEC-11"
   boqNumber?: string; // Overall BOQ Reference Number
   isBoq: boolean; // true = BOQ Item, false = Non-BOQ Item
+  boqTotalQuantity?: number; // Total sanctioned BOQ quantity for this item (auto-filled from Master BOQ or entered manually)
   oem?: string; // Original Equipment Manufacturer
   oemModel?: string; // Model and Make of the item
   billNumber?: string; // Invoice / Bill / Delivery Challan reference
@@ -140,6 +141,7 @@ export interface EntryPass {
   expectedReturnDate?: string; // For Returnable materials (RGP)
   materialReturnStatus?: MaterialReturnStatus;
   challanInvoiceNumber?: string;
+  deliveryChallanDriveUrl?: string; // Google Drive link for Delivery Challan (DC)
   billNumber?: string; // Consignment Bill / Tax Invoice Number
   billDocument?: ApprovedDocument; // Uploaded Bill Copy (PDF / Scan)
   rgpPurpose?: string; // e.g., Calibration, Testing, Maintenance, Loan

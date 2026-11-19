@@ -1,13 +1,19 @@
 import React, { useState, useRef } from 'react';
 import { EntryPass, ApprovedDocument } from '../types';
 import { processUploadedFile, ProcessedUploadFile } from '../utils/imageCompressor';
-import { X, UploadCloud, FileCheck, FileText, Receipt, CheckCircle2, Eye, Loader2 } from 'lucide-react';
+import { validateGoogleDriveLink } from '../utils/passUtils';
+import { X, UploadCloud, FileCheck, FileText, Receipt, CheckCircle2, Eye, Loader2, Link2, ExternalLink, AlertCircle } from 'lucide-react';
 
 interface UploadBillModalProps {
   pass: EntryPass | null;
   isOpen: boolean;
   onClose: () => void;
-  onSaveBill: (passId: string, billNumber: string, billDoc: ApprovedDocument) => void;
+  onSaveBill: (
+    passId: string,
+    billNumber: string,
+    billDoc?: ApprovedDocument,
+    deliveryChallanDriveUrl?: string
+  ) => void;
 }
 
 export const UploadBillModal: React.FC<UploadBillModalProps> = ({
@@ -31,6 +37,10 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
         }
       : null
   );
+  const [deliveryChallanDriveUrl, setDeliveryChallanDriveUrl] = useState(
+    pass?.deliveryChallanDriveUrl || ''
+  );
+  const [challanLinkError, setChallanLinkError] = useState<string | null>(null);
   const [uploadedBy, setUploadedBy] = useState('Amnex Billing & NMDC Materials In-Charge');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -66,18 +76,32 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
   };
 
   const handleSave = () => {
-    if (!selectedFile) return;
+    const trimmedChallanUrl = deliveryChallanDriveUrl.trim();
+    let normalizedChallanUrl: string | undefined = undefined;
 
-    const billDoc: ApprovedDocument = {
-      fileName: selectedFile.fileName,
-      fileSize: selectedFile.fileSize,
-      fileUrl: selectedFile.fileUrl,
-      uploadedAt: new Date().toLocaleString(),
-      uploadedBy: uploadedBy.trim() || 'Billing Administrator',
-      fileType: selectedFile.fileType || 'application/pdf'
-    };
+    if (trimmedChallanUrl) {
+      const validation = validateGoogleDriveLink(trimmedChallanUrl);
+      if (!validation.valid) {
+        setChallanLinkError(validation.error || 'Please enter a valid Google Drive link.');
+        return;
+      }
+      normalizedChallanUrl = validation.normalizedUrl;
+    }
 
-    onSaveBill(pass.id, billNumber.trim(), billDoc);
+    if (!selectedFile && !normalizedChallanUrl) return;
+
+    const billDoc: ApprovedDocument | undefined = selectedFile
+      ? {
+          fileName: selectedFile.fileName,
+          fileSize: selectedFile.fileSize,
+          fileUrl: selectedFile.fileUrl,
+          uploadedAt: new Date().toLocaleString(),
+          uploadedBy: uploadedBy.trim() || 'Billing Administrator',
+          fileType: selectedFile.fileType || 'application/pdf'
+        }
+      : undefined;
+
+    onSaveBill(pass.id, billNumber.trim(), billDoc, normalizedChallanUrl);
 
     setIsSuccess(true);
     setTimeout(() => {
@@ -96,7 +120,7 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
               <Receipt className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Upload Material Bill / Tax Invoice</h2>
+              <h2 className="text-base font-bold text-white">Material Bill &amp; Delivery Challan Link</h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 Pass #{pass.passNumber} • Consignment for {pass.departmentOrProject || 'C&IT'}
               </p>
@@ -125,10 +149,54 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
             />
           </div>
 
+          {/* Delivery Challan Google Drive Link */}
+          <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="block text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Delivery Challan Google Drive Link</span>
+              </label>
+              {deliveryChallanDriveUrl.trim() && validateGoogleDriveLink(deliveryChallanDriveUrl).valid && (
+                <a
+                  href={validateGoogleDriveLink(deliveryChallanDriveUrl).normalizedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline"
+                >
+                  <span>Test Link</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+            <div className="relative">
+              <Link2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="url"
+                value={deliveryChallanDriveUrl}
+                onChange={(e) => {
+                  setDeliveryChallanDriveUrl(e.target.value);
+                  setChallanLinkError(null);
+                }}
+                placeholder="https://drive.google.com/file/d/..."
+                className="w-full pl-9 pr-3 py-2 bg-white border border-emerald-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden"
+              />
+            </div>
+            {challanLinkError ? (
+              <p className="text-[11px] text-rose-600 flex items-center gap-1 font-medium">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{challanLinkError}</span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                Paste the Google Drive share link for the Delivery Challan (DC) copy.
+              </p>
+            )}
+          </div>
+
           {/* File Upload Zone */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Attach Signed Bill / Invoice JPEG or PDF <span className="text-rose-500">*</span>
+              Attach Signed Bill / Invoice JPEG or PDF <span className="text-slate-400 font-normal normal-case">(Optional if Drive link added)</span>
             </label>
             <input
               type="file"
@@ -265,11 +333,11 @@ export const UploadBillModal: React.FC<UploadBillModalProps> = ({
           <button
             id="btn-confirm-save-bill"
             onClick={handleSave}
-            disabled={!selectedFile || !billNumber.trim() || isProcessing}
+            disabled={(!selectedFile && !deliveryChallanDriveUrl.trim()) || isProcessing}
             className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer"
           >
             <FileCheck className="w-4 h-4" />
-            <span>Save & Upload to Database</span>
+            <span>Save to Database</span>
           </button>
         </div>
       </div>
