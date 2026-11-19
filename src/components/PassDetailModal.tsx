@@ -32,7 +32,9 @@ import {
   Image as ImageIcon,
   Link2,
   ExternalLink,
-  ClipboardCheck
+  ClipboardCheck,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   isGoogleDriveDoc,
@@ -73,6 +75,7 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
   onReviewBoqPass
 }) => {
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+  const [showBoqData, setShowBoqData] = useState(false);
 
   if (!pass) return null;
   const isAdmin = userRole === 'admin';
@@ -501,14 +504,38 @@ export const PassDetailModal: React.FC<PassDetailModalProps> = ({
                 )}
               </div>
 
-              {/* BOQ Delivery Tracking Summary (Total BOQ, Present Delivering, Already Delivered, Pending) */}
+              {/* BOQ Delivery Tracking Summary (Hidden by default; click to reveal) */}
               {boqSummary && (
-                <BoqDeliveryTrackerBar
-                  summary={boqSummary}
-                  passNumber={pass.passNumber}
-                  pass={pass}
-                  onReviewMakeModel={onReviewBoqPass ? () => onReviewBoqPass(pass) : undefined}
-                />
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBoqData((prev) => !prev)}
+                    className={`w-full px-3.5 py-2 rounded-lg border flex items-center justify-between gap-2 text-xs font-bold transition cursor-pointer ${
+                      showBoqData
+                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-600'
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>
+                        {showBoqData
+                          ? 'Hide BOQ Delivery Data'
+                          : `Show BOQ Delivery Data (${boqSummary.totalBoqLineItems} BOQ item${boqSummary.totalBoqLineItems === 1 ? '' : 's'})`}
+                      </span>
+                    </span>
+                    {showBoqData ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {showBoqData && (
+                    <BoqDeliveryTrackerBar
+                      summary={boqSummary}
+                      passNumber={pass.passNumber}
+                      pass={pass}
+                      onReviewMakeModel={onReviewBoqPass ? () => onReviewBoqPass(pass) : undefined}
+                    />
+                  )}
+                </div>
               )}
 
               {/* Material Items List with BOQ & Bill Fields */}

@@ -104,6 +104,8 @@ export const PassTable: React.FC<PassTableProps> = ({
   const isAdmin = userRole === 'admin';
   const canReorder = isAdmin && !!onReorderPasses;
   const [expandedPassId, setExpandedPassId] = useState<string | null>(null);
+  const [showAllBoqData, setShowAllBoqData] = useState(false);
+  const [revealedBoqPassIds, setRevealedBoqPassIds] = useState<Record<string, boolean>>({});
   const [draggedPassId, setDraggedPassId] = useState<string | null>(null);
   const [dragOverPassId, setDragOverPassId] = useState<string | null>(null);
   const [editingPosPassId, setEditingPosPassId] = useState<string | null>(null);
@@ -111,6 +113,24 @@ export const PassTable: React.FC<PassTableProps> = ({
 
   const toggleExpand = (id: string) => {
     setExpandedPassId(expandedPassId === id ? null : id);
+  };
+
+  const isBoqDataVisible = (passId: string) => {
+    if (passId in revealedBoqPassIds) return revealedBoqPassIds[passId];
+    return showAllBoqData;
+  };
+
+  const toggleBoqDataForPass = (passId: string) => {
+    setRevealedBoqPassIds((prev) => {
+      const current = passId in prev ? prev[passId] : showAllBoqData;
+      return { ...prev, [passId]: !current };
+    });
+  };
+
+  const handleToggleAllBoqData = () => {
+    const next = !showAllBoqData;
+    setShowAllBoqData(next);
+    setRevealedBoqPassIds({});
   };
 
   const handleDragStart = (e: React.DragEvent<HTMLTableRowElement>, passId: string) => {
@@ -459,6 +479,7 @@ export const PassTable: React.FC<PassTableProps> = ({
   }
 
   const draggedVisibleIdx = draggedPassId ? passes.findIndex((p) => p.id === draggedPassId) : -1;
+  const boqPassCount = passes.filter((p) => computePassBoqSummary(p, allPasses || passes) !== null).length;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
@@ -479,30 +500,57 @@ export const PassTable: React.FC<PassTableProps> = ({
           )}
         </div>
 
-        {hiddenArchivedCount > 0 && onToggleShowArchivedPasses && (
-          <button
-            id="btn-toggle-archived-passes-top"
-            type="button"
-            onClick={onToggleShowArchivedPasses}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
-              showArchivedPasses
-                ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
-                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 shadow-2xs'
-            }`}
-          >
-            {showArchivedPasses ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Hide NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below ({hiddenArchivedCount})</span>
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5 text-amber-700" />
-                <span>Show NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below ({hiddenArchivedCount} hidden)</span>
-              </>
-            )}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {boqPassCount > 0 && (
+            <button
+              id="btn-toggle-all-boq-data"
+              type="button"
+              onClick={handleToggleAllBoqData}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                showAllBoqData
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-600 shadow-2xs'
+                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200'
+              }`}
+            >
+              {showAllBoqData ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>Hide BOQ Data ({boqPassCount})</span>
+                </>
+              ) : (
+                <>
+                  <Layers className="w-3.5 h-3.5 text-indigo-700" />
+                  <span>Show BOQ Data ({boqPassCount} hidden)</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {hiddenArchivedCount > 0 && onToggleShowArchivedPasses && (
+            <button
+              id="btn-toggle-archived-passes-top"
+              type="button"
+              onClick={onToggleShowArchivedPasses}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                showArchivedPasses
+                  ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 shadow-2xs'
+              }`}
+            >
+              {showArchivedPasses ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Hide NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below ({hiddenArchivedCount})</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Show NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below ({hiddenArchivedCount} hidden)</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -528,6 +576,7 @@ export const PassTable: React.FC<PassTableProps> = ({
               const isMaterial = pass.passType === 'Materials';
               const isExpanded = expandedPassId === pass.id;
               const boqSummary = computePassBoqSummary(pass, allPasses || passes);
+              const isBoqVisible = boqSummary !== null && isBoqDataVisible(pass.id);
               const isArchivedRange = isPassHiddenByDefault(pass.passNumber);
               const isBeingDragged = draggedPassId === pass.id;
               const isDropTarget = dragOverPassId === pass.id && draggedPassId !== null && draggedPassId !== pass.id;
@@ -739,10 +788,29 @@ export const PassTable: React.FC<PassTableProps> = ({
                             )}
 
                             {boqSummary && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200">
+                              <button
+                                id={`btn-toggle-boq-${pass.id}`}
+                                type="button"
+                                onClick={() => toggleBoqDataForPass(pass.id)}
+                                title={
+                                  isBoqVisible
+                                    ? 'Click to hide BOQ delivery data'
+                                    : 'Click to show BOQ delivery data (Total, Delivering, Delivered, Pending)'
+                                }
+                                className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border transition cursor-pointer ${
+                                  isBoqVisible
+                                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-600'
+                                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+                                }`}
+                              >
                                 <Layers className="w-2.5 h-2.5" />
-                                <span>BOQ Pass</span>
-                              </span>
+                                <span>{isBoqVisible ? 'Hide BOQ Data' : 'Show BOQ Data'}</span>
+                                {isBoqVisible ? (
+                                  <ChevronUp className="w-2.5 h-2.5" />
+                                ) : (
+                                  <ChevronDown className="w-2.5 h-2.5" />
+                                )}
+                              </button>
                             )}
 
                             {pass.materialCategory === 'Returnable' && pass.expectedReturnDate && (
@@ -1026,8 +1094,8 @@ export const PassTable: React.FC<PassTableProps> = ({
                     </td>
                   </tr>
 
-                  {/* BOQ Pass Delivery Tracking Bar (Always shown directly below BOQ passes) */}
-                  {boqSummary && (
+                  {/* BOQ Pass Delivery Tracking Bar (Hidden by default; shown when user clicks Show BOQ Data) */}
+                  {boqSummary && isBoqVisible && (
                     <tr
                       id={`boq-summary-row-${pass.id}`}
                       className="bg-indigo-50/35 border-b border-indigo-200/80"
