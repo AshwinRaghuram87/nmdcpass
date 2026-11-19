@@ -15,7 +15,7 @@ import { PrintablePassModal } from './components/PrintablePassModal';
 import { PassReportModal } from './components/PassReportModal';
 import { RoleSwitcherModal } from './components/RoleSwitcherModal';
 import { getActiveUserProfile, setActiveUserProfile } from './utils/userProfiles';
-import { getNextPassNumber } from './utils/passUtils';
+import { getNextPassNumber, isPassHiddenByDefault } from './utils/passUtils';
 import { ShieldCheck, AlertTriangle, CheckCircle, Package, Receipt, RotateCcw } from 'lucide-react';
 
 export default function App() {
@@ -92,6 +92,8 @@ export default function App() {
   const [boqFilter, setBoqFilter] = useState('ALL'); // 'ALL' | 'BOQ' | 'NON_BOQ'
   const [billFilter, setBillFilter] = useState('ALL'); // 'ALL' | 'HAS_BILL' | 'NO_BILL'
   const [docStatusFilter, setDocStatusFilter] = useState('ALL');
+  // Hide passes from NMDC/C&IT/37 and below by default; reveal only on click
+  const [showArchivedPasses, setShowArchivedPasses] = useState(false);
 
   // Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -251,6 +253,19 @@ export default function App() {
     materialSearchQuery
   ]);
 
+  // Split filtered passes into <= NMDC/C&IT/37 (hidden by default) and > 37 (visible by default)
+  const hiddenArchivedPasses = useMemo(
+    () => filteredPasses.filter((p) => isPassHiddenByDefault(p.passNumber)),
+    [filteredPasses]
+  );
+
+  const activeRangePasses = useMemo(
+    () => filteredPasses.filter((p) => !isPassHiddenByDefault(p.passNumber)),
+    [filteredPasses]
+  );
+
+  const displayedPasses = showArchivedPasses ? filteredPasses : activeRangePasses;
+
   // Category counts
   const counts = useMemo(() => {
     return {
@@ -316,7 +331,7 @@ export default function App() {
         createdAt: new Date().toISOString().split('T')[0],
         updatedAt: new Date().toISOString().split('T')[0],
       };
-      setPasses((prev) => [newPass, ...prev]);
+      setPasses((prev) => [newPass, ...prev].map((p, idx) => ({ ...p, displayOrder: idx })));
       showToast(`New pass ${newPass.passNumber} registered with CISF gate system.`);
     }
 
@@ -324,11 +339,25 @@ export default function App() {
     setEditingPass(null);
   };
 
+  const handleReorderPasses = (sourcePassId: string, targetPassId: string) => {
+    if (sourcePassId === targetPassId) return;
+    setPasses((prev) => {
+      const sourceIdx = prev.findIndex((p) => p.id === sourcePassId);
+      const targetIdx = prev.findIndex((p) => p.id === targetPassId);
+      if (sourceIdx === -1 || targetIdx === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(sourceIdx, 1);
+      next.splice(targetIdx, 0, moved);
+      return next.map((p, idx) => ({ ...p, displayOrder: idx }));
+    });
+    showToast('Pass position updated.');
+  };
+
   const handleDeletePass = (passId: string) => {
     const p = passes.find((x) => x.id === passId);
     if (!p) return;
     if (window.confirm(`Are you sure you want to delete pass #${p.passNumber} for ${p.passHolderName}?`)) {
-      setPasses((prev) => prev.filter((x) => x.id !== passId));
+      setPasses((prev) => prev.filter((x) => x.id !== passId).map((item, idx) => ({ ...item, displayOrder: idx })));
       showToast(`Pass #${p.passNumber} removed from database.`);
     }
   };
@@ -502,7 +531,7 @@ export default function App() {
   };
 
   const handleImportPasses = (newPasses: EntryPass[]) => {
-    setPasses((prev) => [...newPasses, ...prev]);
+    setPasses((prev) => [...newPasses, ...prev].map((p, idx) => ({ ...p, displayOrder: idx })));
     showToast(`Successfully imported ${newPasses.length} passes from Excel!`);
   };
 
@@ -655,9 +684,9 @@ export default function App() {
           counts={counts}
         />
 
-        {/* Passes Table with RBAC, Download Links, BOQ Details and Bill Links */}
+        {/* Passes Table with RBAC, Drag-and-Drop Reordering, Download Links, BOQ Details and Bill Links */}
         <PassTable
-          passes={filteredPasses}
+          passes={displayedPasses}
           userRole={currentProfile.role}
           onViewPass={(pass) => setViewingPass(pass)}
           onPrintPass={(pass) => setPrintingPass(pass)}
@@ -671,6 +700,11 @@ export default function App() {
           onToggleGateStatus={handleToggleGateStatus}
           onToggleMaterialReturn={handleToggleMaterialReturn}
           onAdvanceProcedureStage={handleAdvanceProcedureStage}
+          onReorderPasses={handleReorderPasses}
+          hiddenArchivedCount={hiddenArchivedPasses.length}
+          showArchivedPasses={showArchivedPasses}
+          onToggleShowArchivedPasses={() => setShowArchivedPasses((prev) => !prev)}
+          totalDatabasePasses={passes.length}
           onOpenNewPassModal={() => {
             setEditingPass(null);
             setIsFormModalOpen(true);

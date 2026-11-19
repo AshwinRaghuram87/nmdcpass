@@ -39,9 +39,19 @@ import {
   Plus,
   FileSpreadsheet,
   Link2,
-  ExternalLink
+  ExternalLink,
+  GripVertical,
+  EyeOff,
+  Archive,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
-import { isGoogleDriveDoc, isExternalDocUrl } from '../utils/passUtils';
+import {
+  isGoogleDriveDoc,
+  isExternalDocUrl,
+  isPassHiddenByDefault,
+  ARCHIVED_PASS_MAX_NUMBER
+} from '../utils/passUtils';
 
 interface PassTableProps {
   passes: EntryPass[];
@@ -55,6 +65,11 @@ interface PassTableProps {
   onToggleGateStatus: (pass: EntryPass) => void;
   onToggleMaterialReturn: (pass: EntryPass) => void;
   onAdvanceProcedureStage?: (pass: EntryPass, nextStage: ProcedureStage) => void;
+  onReorderPasses?: (sourcePassId: string, targetPassId: string) => void;
+  hiddenArchivedCount?: number;
+  showArchivedPasses?: boolean;
+  onToggleShowArchivedPasses?: () => void;
+  totalDatabasePasses?: number;
   onOpenNewPassModal?: () => void;
   onOpenExcelModal?: () => void;
 }
@@ -71,14 +86,90 @@ export const PassTable: React.FC<PassTableProps> = ({
   onToggleGateStatus,
   onToggleMaterialReturn,
   onAdvanceProcedureStage,
+  onReorderPasses,
+  hiddenArchivedCount = 0,
+  showArchivedPasses = false,
+  onToggleShowArchivedPasses,
+  totalDatabasePasses,
   onOpenNewPassModal,
   onOpenExcelModal
 }) => {
   const isAdmin = userRole === 'admin';
+  const canReorder = isAdmin && !!onReorderPasses;
   const [expandedPassId, setExpandedPassId] = useState<string | null>(null);
+  const [draggedPassId, setDraggedPassId] = useState<string | null>(null);
+  const [dragOverPassId, setDragOverPassId] = useState<string | null>(null);
+  const [editingPosPassId, setEditingPosPassId] = useState<string | null>(null);
+  const [posInputValue, setPosInputValue] = useState<string>('');
 
   const toggleExpand = (id: string) => {
     setExpandedPassId(expandedPassId === id ? null : id);
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLTableRowElement>, passId: string) => {
+    if (!canReorder) return;
+    setDraggedPassId(passId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', passId);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLTableRowElement>, targetPassId: string) => {
+    if (!canReorder) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverPassId !== targetPassId) {
+      setDragOverPassId(targetPassId);
+    }
+  };
+
+  const handleDragLeave = (targetPassId: string) => {
+    if (dragOverPassId === targetPassId) {
+      setDragOverPassId(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTableRowElement>, targetPassId: string) => {
+    if (!canReorder || !onReorderPasses) return;
+    e.preventDefault();
+    const sourceId = draggedPassId || e.dataTransfer.getData('text/plain');
+    if (sourceId && sourceId !== targetPassId) {
+      onReorderPasses(sourceId, targetPassId);
+    }
+    setDraggedPassId(null);
+    setDragOverPassId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPassId(null);
+    setDragOverPassId(null);
+  };
+
+  const handleMoveByOffset = (currentIdx: number, offset: -1 | 1) => {
+    if (!canReorder || !onReorderPasses) return;
+    const targetIdx = currentIdx + offset;
+    if (targetIdx < 0 || targetIdx >= passes.length) return;
+    onReorderPasses(passes[currentIdx].id, passes[targetIdx].id);
+  };
+
+  const startEditingPosition = (passId: string, currentPosition: number) => {
+    if (!canReorder) return;
+    setEditingPosPassId(passId);
+    setPosInputValue(String(currentPosition));
+  };
+
+  const commitPositionEdit = (currentIdx: number) => {
+    if (!canReorder || !onReorderPasses) {
+      setEditingPosPassId(null);
+      return;
+    }
+    const parsed = parseInt(posInputValue, 10);
+    setEditingPosPassId(null);
+    if (isNaN(parsed)) return;
+    const clampedPos = Math.max(1, Math.min(passes.length, parsed));
+    const targetIdx = clampedPos - 1;
+    if (targetIdx !== currentIdx && passes[targetIdx]) {
+      onReorderPasses(passes[currentIdx].id, passes[targetIdx].id);
+    }
   };
 
   const getPassTypeBadge = (type: PassType, materialCategory?: MaterialReturnType) => {
@@ -277,6 +368,56 @@ export const PassTable: React.FC<PassTableProps> = ({
   };
 
   if (passes.length === 0) {
+    if (hiddenArchivedCount > 0 && !showArchivedPasses && onToggleShowArchivedPasses) {
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center shadow-2xs">
+          <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3.5 border border-amber-200">
+            <Archive className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">
+            Passes from NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below Are Hidden
+          </h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
+            There are currently no matching passes above NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER}.{' '}
+            <strong className="text-slate-700">{hiddenArchivedCount} pass{hiddenArchivedCount === 1 ? '' : 'es'}</strong> from NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} and below {hiddenArchivedCount === 1 ? 'is' : 'are'} hidden until you click below.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <button
+              id="btn-reveal-hidden-passes-empty"
+              onClick={onToggleShowArchivedPasses}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition cursor-pointer"
+            >
+              <Eye className="w-4 h-4 text-amber-400" />
+              <span>Show NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below ({hiddenArchivedCount})</span>
+            </button>
+            {isAdmin && onOpenNewPassModal && (
+              <button
+                onClick={onOpenNewPassModal}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Create New Pass</span>
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (totalDatabasePasses && totalDatabasePasses > 0) {
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center shadow-2xs">
+          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3 border border-slate-200">
+            <FileText className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">No Matching Passes Found</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+            Try clearing your search query or adjusting the active filter dropdowns above.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-2xs">
         <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3.5 border border-blue-100">
@@ -310,41 +451,192 @@ export const PassTable: React.FC<PassTableProps> = ({
     );
   }
 
+  const draggedVisibleIdx = draggedPassId ? passes.findIndex((p) => p.id === draggedPassId) : -1;
+
   return (
     <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
+      {/* Compact Reorder & Hidden Passes Control Bar */}
+      <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-slate-600">
+          <span className="font-semibold text-slate-800">
+            Showing {passes.length} pass{passes.length === 1 ? '' : 'es'}
+          </span>
+          {canReorder && passes.length > 1 && (
+            <>
+              <span className="text-slate-300">•</span>
+              <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                <GripVertical className="w-3.5 h-3.5 text-slate-400" />
+                <span>Drag rows, use arrows, or click # to adjust position</span>
+              </span>
+            </>
+          )}
+        </div>
+
+        {hiddenArchivedCount > 0 && onToggleShowArchivedPasses && (
+          <button
+            id="btn-toggle-archived-passes-top"
+            type="button"
+            onClick={onToggleShowArchivedPasses}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+              showArchivedPasses
+                ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 shadow-2xs'
+            }`}
+          >
+            {showArchivedPasses ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Hide NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below ({hiddenArchivedCount})</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5 text-amber-700" />
+                <span>Show NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; Below ({hiddenArchivedCount} hidden)</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-900 text-slate-200 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-800">
-              <th className="py-3 px-3.5 whitespace-nowrap">Pass # & Type</th>
-              <th className="py-3 px-3.5">Holder & Personnel</th>
-              <th className="py-3 px-3.5">Department & Gate</th>
-              <th className="py-3 px-3.5 min-w-[170px]">Procedure Pipeline (Amnex → C&IT → CISF)</th>
+              <th className="py-3 px-2.5 text-center whitespace-nowrap w-[72px]" title="Drag rows or click position number to reorder">
+                Pos #
+              </th>
+              <th className="py-3 px-3.5 whitespace-nowrap">Pass # &amp; Type</th>
+              <th className="py-3 px-3.5">Holder &amp; Personnel</th>
+              <th className="py-3 px-3.5">Department &amp; Gate</th>
+              <th className="py-3 px-3.5 min-w-[170px]">Procedure Pipeline (Amnex → C&amp;IT → CISF)</th>
               <th className="py-3 px-3.5 whitespace-nowrap">Validity Period</th>
-              <th className="py-3 px-3.5 min-w-[220px]">Material Details & BOQ / Bill</th>
+              <th className="py-3 px-3.5 min-w-[220px]">Material Details &amp; BOQ / Bill</th>
               <th className="py-3 px-3.5 min-w-[180px]">Approved Document</th>
               <th className="py-3 px-3.5 whitespace-nowrap">Gate Status</th>
               <th className="py-3 px-3.5 text-right whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
-            {passes.map((pass) => {
+            {passes.map((pass, index) => {
               const isMaterial = pass.passType === 'Materials';
               const isExpanded = expandedPassId === pass.id;
-              const hasBill = !!pass.billDocument || !!pass.billNumber;
+              const isArchivedRange = isPassHiddenByDefault(pass.passNumber);
+              const isBeingDragged = draggedPassId === pass.id;
+              const isDropTarget = dragOverPassId === pass.id && draggedPassId !== null && draggedPassId !== pass.id;
+              const dropIndicatorClass = isDropTarget
+                ? draggedVisibleIdx !== -1 && draggedVisibleIdx < index
+                  ? 'shadow-[inset_0_-3px_0_0_#2563eb] bg-blue-50/80'
+                  : 'shadow-[inset_0_3px_0_0_#2563eb] bg-blue-50/80'
+                : '';
 
               return (
                 <React.Fragment key={pass.id}>
                   <tr 
                     id={`pass-row-${pass.id}`}
-                    className={`hover:bg-blue-50/30 transition ${
-                      pass.validityStatus === 'Expired' ? 'bg-rose-50/20' : ''
+                    draggable={canReorder && editingPosPassId !== pass.id}
+                    onDragStart={(e) => handleDragStart(e, pass.id)}
+                    onDragOver={(e) => handleDragOver(e, pass.id)}
+                    onDragLeave={() => handleDragLeave(pass.id)}
+                    onDrop={(e) => handleDrop(e, pass.id)}
+                    onDragEnd={handleDragEnd}
+                    className={`group transition ${
+                      isBeingDragged
+                        ? 'opacity-45 bg-blue-50/60'
+                        : isDropTarget
+                          ? dropIndicatorClass
+                          : pass.validityStatus === 'Expired'
+                            ? 'bg-rose-50/20 hover:bg-blue-50/30'
+                            : isArchivedRange
+                              ? 'bg-slate-50/70 hover:bg-blue-50/30'
+                              : 'hover:bg-blue-50/30'
                     }`}
                   >
+                    {/* Position & Drag Handle */}
+                    <td className="py-3 px-2 align-top select-none">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-0.5">
+                          {canReorder && (
+                            <span
+                              className="text-slate-400 hover:text-slate-700 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-slate-200/70"
+                              title="Drag to move this pass to another position"
+                            >
+                              <GripVertical className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+
+                          {editingPosPassId === pass.id ? (
+                            <input
+                              type="number"
+                              min={1}
+                              max={passes.length}
+                              autoFocus
+                              value={posInputValue}
+                              onChange={(e) => setPosInputValue(e.target.value)}
+                              onBlur={() => commitPositionEdit(index)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  commitPositionEdit(index);
+                                } else if (e.key === 'Escape') {
+                                  setEditingPosPassId(null);
+                                }
+                              }}
+                              className="w-10 px-1 py-0.5 text-center font-mono text-[11px] font-bold bg-white border border-blue-500 rounded focus:outline-hidden"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => startEditingPosition(pass.id, index + 1)}
+                              disabled={!canReorder}
+                              title={canReorder ? `Position #${index + 1} — Click to type a new position` : `Position #${index + 1}`}
+                              className={`min-w-[24px] px-1.5 py-0.5 rounded font-mono text-[11px] font-bold text-center border transition ${
+                                canReorder
+                                  ? 'bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-800 border-slate-200 hover:border-blue-300 cursor-pointer'
+                                  : 'bg-slate-50 text-slate-500 border-slate-200 cursor-default'
+                              }`}
+                            >
+                              {index + 1}
+                            </button>
+                          )}
+                        </div>
+
+                        {canReorder && passes.length > 1 && (
+                          <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => handleMoveByOffset(index, -1)}
+                              title="Move up one position"
+                              className="p-0.5 rounded text-slate-500 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === passes.length - 1}
+                              onClick={() => handleMoveByOffset(index, 1)}
+                              title="Move down one position"
+                              className="p-0.5 rounded text-slate-500 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
                     {/* Pass # & Type */}
                     <td className="py-3 px-3.5 align-top">
-                      <div className="font-mono font-bold text-slate-900 text-xs flex items-center gap-1">
+                      <div className="font-mono font-bold text-slate-900 text-xs flex items-center flex-wrap gap-1.5">
                         <span>{pass.passNumber}</span>
+                        {isArchivedRange && (
+                          <span
+                            className="px-1.5 py-0.5 text-[9px] font-sans font-bold bg-slate-200 text-slate-700 rounded border border-slate-300"
+                            title={`Pass at or below NMDC/C&IT/${ARCHIVED_PASS_MAX_NUMBER}`}
+                          >
+                            ≤ {ARCHIVED_PASS_MAX_NUMBER}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1">
                         {getPassTypeBadge(pass.passType, pass.materialCategory)}
@@ -680,7 +972,7 @@ export const PassTable: React.FC<PassTableProps> = ({
                   {/* Expanded Material Items Drawer */}
                   {isExpanded && isMaterial && pass.materialItems && (
                     <tr className="bg-slate-50/80 border-b border-slate-200">
-                      <td colSpan={9} className="p-4">
+                      <td colSpan={10} className="p-4">
                         <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-2xs">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -739,6 +1031,33 @@ export const PassTable: React.FC<PassTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Bottom Collapsible Toggle Bar for NMDC/C&IT/37 & Below */}
+      {hiddenArchivedCount > 0 && onToggleShowArchivedPasses && (
+        <button
+          id="btn-toggle-archived-passes-bottom"
+          type="button"
+          onClick={onToggleShowArchivedPasses}
+          className={`w-full px-4 py-3 border-t border-slate-200 flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer ${
+            showArchivedPasses
+              ? 'bg-slate-100 hover:bg-slate-200/80 text-slate-700'
+              : 'bg-amber-50/80 hover:bg-amber-100 text-amber-900'
+          }`}
+        >
+          {showArchivedPasses ? (
+            <>
+              <ChevronUp className="w-4 h-4 text-slate-600" />
+              <span>Showing {hiddenArchivedCount} pass{hiddenArchivedCount === 1 ? '' : 'es'} from NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; below — Click to hide</span>
+            </>
+          ) : (
+            <>
+              <Archive className="w-4 h-4 text-amber-700" />
+              <span>NMDC/C&amp;IT/{ARCHIVED_PASS_MAX_NUMBER} &amp; below ({hiddenArchivedCount} hidden pass{hiddenArchivedCount === 1 ? '' : 'es'}) — Click to show</span>
+              <ChevronDown className="w-4 h-4 text-amber-700" />
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 };

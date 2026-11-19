@@ -164,6 +164,7 @@ export interface EntryPass {
   cisfVerifierName?: string;
   followUpNotes?: string;
   lastGateActivity?: string;
+  displayOrder?: number;
   createdAt: string;
   updatedAt: string;
 }

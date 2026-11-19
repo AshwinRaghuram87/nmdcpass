@@ -44,8 +44,8 @@ export async function idbSavePasses(passes: EntryPass[]): Promise<boolean> {
           return;
         }
 
-        passes.forEach((p) => {
-          const putReq = store.put(p);
+        passes.forEach((p, idx) => {
+          const putReq = store.put({ ...p, displayOrder: idx });
           putReq.onsuccess = () => {
             completed++;
             if (completed === passes.length) {
@@ -83,9 +83,12 @@ export async function idbLoadPasses(): Promise<EntryPass[] | null> {
       const request = store.getAll();
 
       request.onsuccess = () => {
-        const passes = request.result;
+        const passes = request.result as EntryPass[];
         if (Array.isArray(passes) && passes.length > 0) {
-          resolve(passes as EntryPass[]);
+          const sorted = [...passes].sort(
+            (a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER)
+          );
+          resolve(sorted);
         } else {
           resolve(null);
         }

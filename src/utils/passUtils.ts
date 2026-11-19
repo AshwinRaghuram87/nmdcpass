@@ -67,6 +67,48 @@ export function formatGatePassNumber(passNumber?: string): string {
   return trimmed;
 }
 
+export const ARCHIVED_PASS_MAX_NUMBER = 37;
+
+/**
+ * Extracts the numeric sequence from a pass number such as "NMDC/C&IT/37",
+ * "NMDC/C&IT/ 15", "NMDC-C&IT-37", or legacy numeric pass IDs.
+ */
+export function extractPassSequenceNumber(passNumber?: string): number | null {
+  if (!passNumber) return null;
+  const trimmed = passNumber.trim();
+
+  // Matches 'NMDC/C&IT/37', 'NMDC/C&IT/ 37', 'NMDC-C&IT-37', 'NMDC/C&IT/037'
+  const nmdcMatch = trimmed.match(/NMDC\s*[/-]\s*C&IT\s*[/-]\s*0*(\d+)/i);
+  if (nmdcMatch && nmdcMatch[1]) {
+    const val = parseInt(nmdcMatch[1], 10);
+    return isNaN(val) ? null : val;
+  }
+
+  // Matches legacy AMN-NMDC-...-001 style trailing sequence
+  const amnMatch = trimmed.match(/^AMN-NMDC-.*?(\d+)$/i);
+  if (amnMatch && amnMatch[1]) {
+    const val = parseInt(amnMatch[1], 10);
+    return isNaN(val) ? null : val;
+  }
+
+  // Pure numeric pass number e.g. '37'
+  const pureNumMatch = trimmed.match(/^0*(\d+)$/);
+  if (pureNumMatch && pureNumMatch[1]) {
+    const val = parseInt(pureNumMatch[1], 10);
+    return isNaN(val) ? null : val;
+  }
+
+  return null;
+}
+
+/**
+ * Returns true if the pass number is NMDC/C&IT/37 or below (hidden by default until clicked).
+ */
+export function isPassHiddenByDefault(passNumber?: string): boolean {
+  const seq = extractPassSequenceNumber(passNumber);
+  return seq !== null && seq <= ARCHIVED_PASS_MAX_NUMBER;
+}
+
 /**
  * Checks whether an attached document is a Google Drive link
  */
